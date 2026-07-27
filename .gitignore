@@ -1,0 +1,20 @@
+# Ambiente Virtual
+venv/
+env/
+ENV/
+
+# Banco de Dados Local (Evita subir seus dados de teste)
+*.sqlite3
+*.db
+
+# Arquivos compilados do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configurações de IDEs
+.vscode/
+.idea/
+
+# Variáveis de ambiente / Segredos
+.env
