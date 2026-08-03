@@ -6,8 +6,10 @@ class TransacaoSerializer(serializers.ModelSerializer):
         model = Transacao
         #Aqui é definido quais campos do Model ficam vísiveis na API
         fields = '__all__'
+        read_only_fields = ['usuario']  # <-- Impede que seja obrigatório no POST do REST
 
 class OrcamentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrcamentoMensal
         fields = '__all__'
+        read_only_fields = ['usuario']

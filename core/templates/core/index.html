@@ -19,6 +19,9 @@
 
 <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
 
+    <!-- Tag nativa do Django para disponibilizar o Cookie CSRF se necessário -->
+    {% csrf_token %}
+
     <!-- MODAL DE PRIMEIRA ETAPA: REGISTRAR SALÁRIO -->
     <div id="modalSalario"
         class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 {% if planejamento %}hidden{% endif %}">
@@ -52,7 +55,7 @@
     </div>
 
 
-    <!-- CONTAINER PRINCIPAL (ESTILO REFERÊNCIA) -->
+    <!-- CONTAINER PRINCIPAL -->
     <div class="max-w-4xl w-full space-y-6">
 
         <!-- CABEÇALHO TEAL -->
@@ -63,6 +66,10 @@
                 class="text-xs bg-teal-800 hover:bg-teal-900 px-3 py-1.5 rounded text-teal-100 transition">
                 ⚙️ Alterar Salário
             </button>
+            <a href="{% url 'logout' %}"
+                class="text-xs bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded text-white font-medium transition">
+                Sair
+            </a>
         </header>
 
         <!-- DASHBOARD CARDS (ENTRADAS / SAÍDAS / TOTAL) -->
@@ -88,36 +95,37 @@
                     <span>Total Saldo</span>
                     <span class="font-bold">$</span>
                 </div>
-                <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saldo|default:"0.00" }}</p>
+                <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{totais.saldo|default:"0.00"}}</p>
             </div>
         </div>
 
 
-        <!-- SEÇÃO DE RECOMENDAÇÃO (MOSTRA SÓ SE O SALÁRIO FOR INFORMADO) -->
+        <!-- SEÇÃO DE RECOMENDAÇÃO -->
         {% if planejamento %}
         <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-            <h3 class="text-xs font-bold text-teal-700 uppercase tracking-wider mb-3">Planejamento Recomendado (Salário:
-                R$ {{ planejamento.salario }})</h3>
+            <h3 class="text-xs font-bold text-teal-700 uppercase tracking-wider mb-3">
+                Planejamento Recomendado (Salário: R$ {{planejamento.salario}})
+            </h3>
             <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-xs">
                 <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
                     <span class="text-gray-500 block">Renda Passiva (200x)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{ planejamento.meta_renda_passiva|floatformat:2 }}</strong>
+                    <strong class="text-gray-800 text-sm">R$ {{planejamento.meta_renda_passiva|floatformat:2}}</strong>
                 </div>
                 <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
                     <span class="text-gray-500 block">Reserva (6x)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{ planejamento.reserva_emergencia|floatformat:2 }}</strong>
+                    <strong class="text-gray-800 text-sm">R$ {{planejamento.reserva_emergencia|floatformat:2}}</strong>
                 </div>
                 <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
                     <span class="text-emerald-600 block">Investimento (10%)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{ planejamento.investimento_mensal|floatformat:2 }}</strong>
+                    <strong class="text-gray-800 text-sm">R$ {{planejamento.investimento_mensal|floatformat:2}}</strong>
                 </div>
                 <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
                     <span class="text-sky-600 block">Contas Fixas (60%)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{ planejamento.contas_fixas|floatformat:2 }}</strong>
+                    <strong class="text-gray-800 text-sm">R$ {{planejamento.contas_fixas|floatformat:2}}</strong>
                 </div>
                 <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
                     <span class="text-purple-600 block">Lazer (30%)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{ planejamento.lazer|floatformat:2 }}</strong>
+                    <strong class="text-gray-800 text-sm">R$ {{planejamento.lazer|floatformat:2}}</strong>
                 </div>
             </div>
         </div>
@@ -157,6 +165,54 @@
             </form>
         </div>
 
+        <!-- MODAL DE EDIÇÃO DE TRANSAÇÃO -->
+        <div id="modalEditar"
+            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">Editar Transação</h3>
+                    <button onclick="fecharModalEdicao()" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+
+                <form id="formEditarTransacao" class="space-y-4">
+                    <input type="hidden" id="editId">
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
+                        <input type="text" id="editDescricao" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">Valor</label>
+                        <input type="number" step="0.01" id="editValor" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                    </div>
+
+                    <div class="flex items-center gap-4 text-sm">
+                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
+                            <input type="radio" name="editTipo" value="RECEITA" id="editTipoReceita"
+                                class="text-teal-600"> Entrada
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
+                            <input type="radio" name="editTipo" value="DESPESA" id="editTipoDespesa"
+                                class="text-teal-600"> Saída
+                        </label>
+                    </div>
+
+                    <div class="flex gap-2 pt-2">
+                        <button type="submit"
+                            class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                            Salvar Alterações
+                        </button>
+                        <button type="button" onclick="fecharModalEdicao()"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
         <!-- TABELA DE TRANSAÇÕES -->
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
@@ -183,8 +239,13 @@
                                 class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-xs font-bold">⬇</span>
                             {% endif %}
                         </td>
-                        <td class="py-3 px-6 text-right">
-                            <button onclick="deletarTransacao({{ t.id }})"
+                        <td class="py-3 px-6 text-right flex items-center justify-end gap-2">
+                            <button
+                                onclick="abrirModalEdicao('{{ t.id }}', '{{ t.descricao }}', '{{ t.valor }}', '{{ t.tipo }}')"
+                                class="text-gray-400 hover:text-teal-600 transition" title="Editar">
+                                ✏️
+                            </button>
+                            <button onclick="deletarTransacao('{{ t.id }}')"
                                 class="text-gray-400 hover:text-rose-600 transition" title="Excluir">
                                 🗑️
                             </button>
@@ -204,9 +265,30 @@
     </div>
 
 
-    <!-- JAVASCRIPT DE INTEGRAÇÃO COM A API E CONTROLE DO MODAL -->
+    <!-- JAVASCRIPT DE INTEGRAÇÃO COM A API -->
     <script>
-        // Funções para controle do Modal de Salário
+        // Função auxiliar para obter o CSRF Token dos Cookies do Django
+        function getCsrfToken() {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, 10) === ('csrftoken=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(10));
+                        break;
+                    }
+                }
+            }
+            // Tenta pegar o token do DOM caso o cookie falhe
+            if (!cookieValue) {
+                const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+                if (csrfInput) cookieValue = csrfInput.value;
+            }
+            return cookieValue;
+        }
+
+        // Controle do Modal
         function fecharModalSalario() {
             document.getElementById('modalSalario').classList.add('hidden');
         }
@@ -215,7 +297,7 @@
             document.getElementById('modalSalario').classList.remove('hidden');
         }
 
-        // Salvar Salário (Chama Endpoint de Salário ou cria no backend)
+        // 1. Salvar Salário
         document.getElementById('formSalario').addEventListener('submit', async function (e) {
             e.preventDefault();
             const salarioInput = document.getElementById('inputSalario').value;
@@ -226,26 +308,22 @@
                 return;
             }
 
-            const payload = {
-                renda_mensal: salarioVal
-            };
+            const payload = { renda_mensal: salarioVal };
 
             try {
                 const response = await fetch('/api/orcamento/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        // Garante que o Django REST Framework não bloqueie por CSRF
+                        'X-CSRFToken': getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
-                    // Recarrega a página para processar a view com o novo orçamento
                     window.location.reload();
                 } else {
-                    // Pega o erro detalhado que a API do Django devolveu
                     const erroData = await response.json();
                     console.error('Erro retornado pela API:', erroData);
                     alert(`Erro ao salvar salário: ${JSON.stringify(erroData)}`);
@@ -256,44 +334,130 @@
             }
         });
 
-        // Adicionar Transação (POST para API REST)
+        // 2. Adicionar Transação
         document.getElementById('formTransacao').addEventListener('submit', async function (e) {
             e.preventDefault();
 
             const tipoSelecionado = document.querySelector('input[name="tipo_radio"]:checked').value;
             const dataHoje = new Date().toISOString().split('T')[0];
+            const valorVal = parseFloat(document.getElementById('valor').value);
 
             const payload = {
                 descricao: document.getElementById('descricao').value,
-                valor: document.getElementById('valor').value,
+                valor: valorVal,
                 tipo: tipoSelecionado,
                 data: dataHoje,
                 categoria: "Geral",
                 pago: true
             };
 
-            const response = await fetch('/api/transacoes/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const response = await fetch('/api/transacoes/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-            if (response.ok) {
-                window.location.reload();
-            } else {
-                alert('Erro ao registrar movimentação.');
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const erroData = await response.json();
+                    console.error('Erro retornado pela API:', erroData);
+                    alert(`Erro ao registrar movimentação: ${JSON.stringify(erroData)}`);
+                }
+            } catch (error) {
+                console.error('Erro de conexão:', error);
+                alert('Erro de conexão ao salvar transação.');
             }
         });
 
-        // Deletar Transação (DELETE na API REST)
-        async function deletarTransacao(id) {
-            if (confirm('Deseja realmente excluir este registro?')) {
+        //3. Controle do Modal de Edição
+        function abrirModalEdicao(id, descricao, valor, tipo) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editDescricao').value = descricao;
+
+            // Converte para String antes do replace para evitar Uncaught TypeError
+            const valorStr = String(valor).replace(',', '.');
+            document.getElementById('editValor').value = parseFloat(valorStr);
+
+            if (tipo === 'RECEITA') {
+                document.getElementById('editTipoReceita').checked = true;
+            } else {
+                document.getElementById('editTipoDespesa').checked = true;
+            }
+
+            document.getElementById('modalEditar').classList.remove('hidden');
+        }
+
+        function fecharModalEdicao() {
+            document.getElementById('modalEditar').classList.add('hidden');
+        }
+
+        //3.1. Submissão da Edição (PATCH na API REST)
+        document.getElementById('formEditarTransacao').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('editId').value;
+            const tipoSelecionado = document.querySelector('input[name="editTipo"]:checked').value;
+            const valorVal = parseFloat(document.getElementById('editValor').value);
+
+            const payload = {
+                descricao: document.getElementById('editDescricao').value,
+                valor: valorVal,
+                tipo: tipoSelecionado,
+            };
+
+            try {
                 const response = await fetch(`/api/transacoes/${id}/`, {
-                    method: 'DELETE'
+                    method: 'PATCH', // PATCH altera apenas os campos informados
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
                 });
+
                 if (response.ok) {
                     window.location.reload();
+                } else {
+                    const erroData = await response.json();
+                    console.error('Erro retornado pela API:', erroData);
+                    alert(`Erro ao atualizar transação: ${JSON.stringify(erroData)}`);
                 }
+            } catch (error) {
+                console.error('Erro de conexão:', error);
+                alert('Erro de conexão ao tentar atualizar transação.');
+            }
+        });
+
+        // 4. Deletar Transação
+        async function deletarTransacao(id) {
+            if (!confirm('Tem certeza que deseja excluir esta transação?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/transacoes/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Erro ao excluir a transação.');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                alert('Erro de conexão ao tentar excluir.');
             }
         }
     </script>

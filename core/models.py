@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+from django.contrib.auth.models import User
 
 class Transacao(models.Model):
     #Opções fixas de movimentação
@@ -9,6 +10,8 @@ class Transacao(models.Model):
     ]
 
     #Campos da tabela do banco de dados
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transacoes')
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     descricao = models.CharField(max_length=255)
     valor = models.DecimalField(max_digits=10, decimal_places=2) #Aceita até 99.999.999,99
@@ -22,6 +25,8 @@ class Transacao(models.Model):
         return f'{self.tipo} - {self.descricao} - R$ {self.valor}'
     
 class OrcamentoMensal(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orcamento')
+    
     renda_mensal = models.DecimalField(
         max_digits=10,
         decimal_places=2,
