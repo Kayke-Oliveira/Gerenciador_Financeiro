@@ -6,7 +6,8 @@ from core.views import (
     pagina_inicial, 
     register_view, 
     login_view, 
-    logout_view
+    logout_view,
+    GraficosDataAPIView,
 )
 
 # O Router gera as URLs da API RESTful (Apenas para ViewSets)
@@ -23,4 +24,5 @@ urlpatterns = [
 
     # Endpoints da API REST
     path('api/', include(router.urls)),
+    path('api/graficos-dados/', GraficosDataAPIView.as_view(), name='graficos-dados')
 ]

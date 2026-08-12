@@ -15,11 +15,13 @@
             font-family: 'Inter', sans-serif;
         }
     </style>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
 
-    <!-- Tag nativa do Django para disponibilizar o Cookie CSRF se necessário -->
+    <!-- Tag nativa do Django para disponibilizar o Cookie CSRF -->
     {% csrf_token %}
 
     <!-- MODAL DE PRIMEIRA ETAPA: REGISTRAR SALÁRIO -->
@@ -61,212 +63,356 @@
         <!-- CABEÇALHO TEAL -->
         <header
             class="bg-teal-700 text-white text-center py-6 rounded-t-xl shadow-md flex justify-between items-center px-8">
-            <h1 class="text-2xl font-bold tracking-wide mx-auto">Controle Financeiro</h1>
-            <button onclick="abrirModalSalario()"
-                class="text-xs bg-teal-800 hover:bg-teal-900 px-3 py-1.5 rounded text-teal-100 transition">
-                ⚙️ Alterar Salário
-            </button>
-            <a href="{% url 'logout' %}"
-                class="text-xs bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded text-white font-medium transition">
-                Sair
-            </a>
+            <h1 class="text-2xl font-bold tracking-wide">Controle Financeiro</h1>
+            <div class="flex items-center gap-2">
+                <button onclick="abrirModalSalario()"
+                    class="text-xs bg-teal-800 hover:bg-teal-900 px-3 py-1.5 rounded text-teal-100 transition">
+                    ⚙️ Alterar Salário
+                </button>
+                <a href="{% url 'logout' %}"
+                    class="text-xs bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded text-white font-medium transition">
+                    Sair
+                </a>
+            </div>
         </header>
 
-        <!-- DASHBOARD CARDS (ENTRADAS / SAÍDAS / TOTAL) -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
-                <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
-                    <span>Entradas</span>
-                    <span class="text-emerald-600 font-bold">⬆</span>
-                </div>
-                <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.entradas|default:"0.00" }}</p>
+        <!-- BARRA DE FILTRO DE MÊS E ANO -->
+        <div
+            class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">📅</span>
+                <h2 class="text-sm font-semibold text-gray-700">Período de Visualização</h2>
             </div>
 
-            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
-                <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
-                    <span>Saídas</span>
-                    <span class="text-rose-600 font-bold">⬇</span>
-                </div>
-                <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saidas|default:"0.00" }}</p>
-            </div>
+            <form id="formFiltroData" method="GET" class="flex items-center gap-3">
+                <!-- Seleção do Mês -->
+                <select name="mes" id="selectMes" onchange="aplicarFiltroData()"
+                    class="border border-gray-300 rounded px-3 py-1.5 text-sm font-medium text-gray-700 bg-white focus:outline-none focus:border-teal-600 transition">
+                    {% for num, nome in meses %}
+                    <option value="{{ num }}" {% if num == mes_selecionado %} selected {% endif %}>
+                        {{ nome }}
+                    </option>
+                    {% endfor %}
+                </select>
 
-            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
-                <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
-                    <span>Total Saldo</span>
-                    <span class="font-bold">$</span>
-                </div>
-                <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{totais.saldo|default:"0.00"}}</p>
-            </div>
-        </div>
-
-
-        <!-- SEÇÃO DE RECOMENDAÇÃO -->
-        {% if planejamento %}
-        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-            <h3 class="text-xs font-bold text-teal-700 uppercase tracking-wider mb-3">
-                Planejamento Recomendado (Salário: R$ {{planejamento.salario}})
-            </h3>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-xs">
-                <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
-                    <span class="text-gray-500 block">Renda Passiva (200x)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{planejamento.meta_renda_passiva|floatformat:2}}</strong>
-                </div>
-                <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
-                    <span class="text-gray-500 block">Reserva (6x)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{planejamento.reserva_emergencia|floatformat:2}}</strong>
-                </div>
-                <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
-                    <span class="text-emerald-600 block">Investimento (10%)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{planejamento.investimento_mensal|floatformat:2}}</strong>
-                </div>
-                <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
-                    <span class="text-sky-600 block">Contas Fixas (60%)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{planejamento.contas_fixas|floatformat:2}}</strong>
-                </div>
-                <div class="bg-gray-50 p-2.5 rounded border border-gray-200">
-                    <span class="text-purple-600 block">Lazer (30%)</span>
-                    <strong class="text-gray-800 text-sm">R$ {{planejamento.lazer|floatformat:2}}</strong>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-
-        <!-- FORMULÁRIO INLINE DE NOVO GASTO/ENTRADA -->
-        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-            <form id="formTransacao" class="flex flex-wrap md:flex-nowrap items-end gap-4">
-                <div class="flex-1 min-w-[180px]">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
-                    <input type="text" id="descricao" required placeholder="Ex: Aluguel"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
-                </div>
-
-                <div class="w-full md:w-36">
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor</label>
-                    <input type="number" step="0.01" id="valor" required placeholder="0.00"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
-                </div>
-
-                <div class="flex items-center gap-4 py-2 text-sm">
-                    <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
-                        <input type="radio" name="tipo_radio" value="RECEITA" class="text-teal-600 focus:ring-teal-500">
-                        Entrada
-                    </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
-                        <input type="radio" name="tipo_radio" value="DESPESA" checked
-                            class="text-teal-600 focus:ring-teal-500"> Saída
-                    </label>
-                </div>
-
-                <button type="submit"
-                    class="bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition shadow-sm uppercase tracking-wider">
-                    Adicionar
-                </button>
+                <!-- Seleção do Ano -->
+                <select name="ano" id="selectAno" onchange="aplicarFiltroData()"
+                    class="border border-gray-300 rounded px-3 py-1.5 text-sm font-medium text-gray-700 bg-white focus:outline-none focus:border-teal-600 transition">
+                    {% for ano in anos %}
+                    <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>
+                        {{ ano }}
+                    </option>
+                    {% endfor %}
+                </select>
             </form>
         </div>
 
-        <!-- MODAL DE EDIÇÃO DE TRANSAÇÃO -->
-        <div id="modalEditar"
-            class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-            <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-gray-800">Editar Transação</h3>
-                    <button onclick="fecharModalEdicao()" class="text-gray-400 hover:text-gray-600">✕</button>
-                </div>
-
-                <form id="formEditarTransacao" class="space-y-4">
-                    <input type="hidden" id="editId">
-
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
-                        <input type="text" id="editDescricao" required
-                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-1">Valor</label>
-                        <input type="number" step="0.01" id="editValor" required
-                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
-                    </div>
-
-                    <div class="flex items-center gap-4 text-sm">
-                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
-                            <input type="radio" name="editTipo" value="RECEITA" id="editTipoReceita"
-                                class="text-teal-600"> Entrada
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
-                            <input type="radio" name="editTipo" value="DESPESA" id="editTipoDespesa"
-                                class="text-teal-600"> Saída
-                        </label>
-                    </div>
-
-                    <div class="flex gap-2 pt-2">
-                        <button type="submit"
-                            class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
-                            Salvar Alterações
-                        </button>
-                        <button type="button" onclick="fecharModalEdicao()"
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
-                            Cancelar
-                        </button>
-                    </div>
-                </form>
+        <!-- MENU DE NAVEGAÇÃO POR ABAS -->
+        <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div class="flex border-b border-gray-200 overflow-x-auto">
+                <button id="btn-aba-dashboard" onclick="alternarAba('dashboard')"
+                    class="py-3 px-6 border-b-2 font-semibold text-sm transition-colors border-teal-600 text-teal-700 cursor-pointer whitespace-nowrap">
+                    📊 Dashboard & Gráficos
+                </button>
+                <button id="btn-aba-transacoes" onclick="alternarAba('transacoes')"
+                    class="py-3 px-6 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 cursor-pointer whitespace-nowrap">
+                    💳 Lançamentos & Histórico
+                </button>
+                <button id="btn-aba-planejamento" onclick="alternarAba('planejamento')"
+                    class="py-3 px-6 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 cursor-pointer whitespace-nowrap">
+                    🎯 Planejamento Financeiro
+                </button>
             </div>
         </div>
 
-        <!-- TABELA DE TRANSAÇÕES -->
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <table class="w-full text-left border-collapse text-sm">
-                <thead>
-                    <tr class="border-b border-gray-200 bg-gray-50 text-gray-600 font-semibold">
-                        <th class="py-3 px-6">Descrição</th>
-                        <th class="py-3 px-6">Valor</th>
-                        <th class="py-3 px-6 text-center">Tipo</th>
-                        <th class="py-3 px-6 text-right">Ação</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    {% for t in transacoes %}
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="py-3 px-6 text-gray-800 font-medium">{{ t.descricao }}</td>
-                        <td class="py-3 px-6 font-semibold text-gray-900">R$ {{ t.valor }}</td>
-                        <td class="py-3 px-6 text-center">
-                            {% if t.tipo == 'RECEITA' %}
-                            <span
-                                class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs font-bold">⬆</span>
-                            {% else %}
-                            <span
-                                class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-xs font-bold">⬇</span>
-                            {% endif %}
-                        </td>
-                        <td class="py-3 px-6 text-right flex items-center justify-end gap-2">
-                            <button
-                                onclick="abrirModalEdicao('{{ t.id }}', '{{ t.descricao }}', '{{ t.valor }}', '{{ t.tipo }}')"
-                                class="text-gray-400 hover:text-teal-600 transition" title="Editar">
-                                ✏️
-                            </button>
-                            <button onclick="deletarTransacao('{{ t.id }}')"
-                                class="text-gray-400 hover:text-rose-600 transition" title="Excluir">
-                                🗑️
-                            </button>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="4" class="py-8 text-center text-gray-400 italic">
-                            Nenhum registro encontrado. Adicione uma movimentação acima!
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- ==========================================
+             ABA 1: DASHBOARD & GRÁFICOS
+             ========================================== -->
+        <div id="aba-dashboard" class="aba-conteudo space-y-6">
+            <!-- CARDS DE TOTALIZADORES -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
+                    <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
+                        <span>Entradas</span>
+                        <span class="text-emerald-600 font-bold">⬆</span>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.entradas|default:"0.00" }}
+                    </p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
+                    <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
+                        <span>Saídas</span>
+                        <span class="text-rose-600 font-bold">⬇</span>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saidas|default:"0.00" }}
+                    </p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
+                    <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
+                        <span>Total Saldo</span>
+                        <span class="font-bold text-teal-600">$</span>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saldo|default:"0.00" }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- ÁREA DOS GRÁFICOS CHART.JS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Gráfico 1: Entradas vs Saídas -->
+                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                    <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">
+                        Resumo: Entradas vs. Saídas
+                    </h3>
+                    <div class="relative h-64 flex justify-center items-center">
+                        <canvas id="chartTipos"></canvas>
+                    </div>
+                </div>
+
+                <!-- Gráfico 2: Despesas por Categoria -->
+                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                    <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">
+                        Despesas por Categoria
+                    </h3>
+                    <div class="relative h-64">
+                        <canvas id="chartCategorias"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==========================================
+             ABA 2: LANÇAMENTOS E HISTÓRICO
+             ========================================== -->
+        <div id="aba-transacoes" class="aba-conteudo hidden space-y-6">
+            <!-- FORMULÁRIO INLINE DE NOVO GASTO/ENTRADA -->
+            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                <form id="formTransacao" class="flex flex-wrap lg:flex-nowrap items-end gap-4">
+
+                    <!-- Categoria -->
+                    <div class="w-full sm:w-48">
+                        <label for="categoria" class="block text-xs font-semibold text-gray-600 mb-1">Categoria</label>
+                        <select name="categoria" id="categoria" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:border-teal-600 transition-colors cursor-pointer">
+                            <option value="" disabled selected>Selecione...</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Moradia">Moradia</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Educação">Educação</option>
+                            <option value="Compras">Compras</option>
+                            <option value="Salário">Salário</option>
+                            <option value="Investimentos">Investimentos</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="flex-1 min-w-[200px]">
+                        <label for="descricao" class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
+                        <input type="text" id="descricao" required placeholder="Ex: Aluguel, Supermercado..."
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600 transition-colors">
+                    </div>
+
+                    <!-- Valor -->
+                    <div class="w-full sm:w-36">
+                        <label for="valor" class="block text-xs font-semibold text-gray-600 mb-1">Valor
+                            (R$)</label>
+                        <input type="number" step="0.01" id="valor" required placeholder="0.00"
+                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600 transition-colors">
+                    </div>
+
+                    <!-- Tipo (Entrada / Saída) -->
+                    <div class="flex items-center gap-4 py-2 text-sm">
+                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700 font-medium select-none">
+                            <input type="radio" name="tipo_radio" value="RECEITA"
+                                class="text-teal-600 focus:ring-teal-500 cursor-pointer">
+                            Entrada
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700 font-medium select-none">
+                            <input type="radio" name="tipo_radio" value="DESPESA" checked
+                                class="text-teal-600 focus:ring-teal-500 cursor-pointer">
+                            Saída
+                        </label>
+                    </div>
+
+                    <!-- Botão Adicionar -->
+                    <button type="submit"
+                        class="w-full lg:w-auto bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
+                        Adicionar
+                    </button>
+                </form>
+            </div>
+
+            <!-- TABELA DE TRANSAÇÕES -->
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 bg-gray-50 text-gray-600 font-semibold">
+                            <th class="py-3 px-6">Descrição</th>
+                            <th class="py-3 px-6">Valor</th>
+                            <th class="py-3 px-6 text-center">Tipo</th>
+                            <th class="py-3 px-6 text-right">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for t in transacoes %}
+                        <tr class="hover:bg-gray-50 transition">
+                            <td class="py-3 px-6 text-gray-800 font-medium">
+                                {{ t.categoria }}
+                                {% if t.descricao %}
+                                <span class="block text-xs text-gray-400 font-normal">{{ t.descricao }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6 font-semibold text-gray-900">R$ {{ t.valor }}</td>
+                            <td class="py-3 px-6 text-center">
+                                {% if t.tipo == 'RECEITA' %}
+                                <span
+                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs font-bold">⬆</span>
+                                {% else %}
+                                <span
+                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-xs font-bold">⬇</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-6 text-right flex items-center justify-end gap-2">
+                                <button
+                                    onclick="abrirModalEdicao('{{ t.id }}', '{{ t.descricao }}', '{{ t.valor }}', '{{ t.tipo }}')"
+                                    class="text-gray-400 hover:text-teal-600 transition" title="Editar">
+                                    ✏️
+                                </button>
+                                <button onclick="deletarTransacao('{{ t.id }}')"
+                                    class="text-gray-400 hover:text-rose-600 transition" title="Excluir">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-gray-400 italic">
+                                Nenhum registro encontrado. Adicione uma movimentação acima!
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <!-- ==========================================
+             ABA 3: PLANEJAMENTO FINANCEIRO
+             ========================================== -->
+        <div id="aba-planejamento" class="aba-conteudo hidden space-y-6">
+            {% if planejamento %}
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
+                <h3 class="text-xs font-bold text-teal-700 uppercase tracking-wider mb-4">
+                    Planejamento Recomendado (Salário Base: R$ {{planejamento.salario}})
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-xs">
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                        <span class="text-gray-500 block mb-1">Renda Passiva (200x)</span>
+                        <strong class="text-gray-800 text-sm">R$
+                            {{planejamento.meta_renda_passiva|floatformat:2}}</strong>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                        <span class="text-gray-500 block mb-1">Reserva (6x)</span>
+                        <strong class="text-gray-800 text-sm">R$
+                            {{planejamento.reserva_emergencia|floatformat:2}}</strong>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                        <span class="text-emerald-600 block mb-1">Investimento (10%)</span>
+                        <strong class="text-gray-800 text-sm">R$
+                            {{planejamento.investimento_mensal|floatformat:2}}</strong>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                        <span class="text-sky-600 block mb-1">Contas Fixas (60%)</span>
+                        <strong class="text-gray-800 text-sm">R$
+                            {{planejamento.contas_fixas|floatformat:2}}</strong>
+                    </div>
+                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
+                        <span class="text-purple-600 block mb-1">Lazer (30%)</span>
+                        <strong class="text-gray-800 text-sm">R$
+                            {{planejamento.lazer|floatformat:2}}</strong>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
+                <p class="text-gray-500 mb-4">Você ainda não configurou seu salário mensal para ver as
+                    recomendações.
+                </p>
+                <button onclick="abrirModalSalario()"
+                    class="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-5 py-2.5 rounded text-sm transition shadow-sm">
+                    Configurar Salário Agora
+                </button>
+            </div>
+            {% endif %}
         </div>
 
     </div>
 
 
-    <!-- JAVASCRIPT DE INTEGRAÇÃO COM A API -->
+    <!-- MODAL DE EDIÇÃO DE TRANSAÇÃO -->
+    <div id="modalEditar"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Editar Transação</h3>
+                <button onclick="fecharModalEdicao()" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <form id="formEditarTransacao" class="space-y-4">
+                <input type="hidden" id="editId">
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
+                    <input type="text" id="editDescricao" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor</label>
+                    <input type="number" step="0.01" id="editValor" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div class="flex items-center gap-4 text-sm">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
+                        <input type="radio" name="editTipo" value="RECEITA" id="editTipoReceita" class="text-teal-600">
+                        Entrada
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
+                        <input type="radio" name="editTipo" value="DESPESA" id="editTipoDespesa" class="text-teal-600">
+                        Saída
+                    </label>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit"
+                        class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                        Salvar Alterações
+                    </button>
+                    <button type="button" onclick="fecharModalEdicao()"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT DE INTEGRAÇÃO COM A API E NAVEGAÇÃO -->
     <script>
+        // Guardas Globais para Instâncias dos Gráficos (evita erro de re-renderização no Canvas)
+        let chartTiposInstance = null;
+        let chartCategoriasInstance = null;
+
         // Função auxiliar para obter o CSRF Token dos Cookies do Django
         function getCsrfToken() {
             let cookieValue = null;
@@ -280,7 +426,6 @@
                     }
                 }
             }
-            // Tenta pegar o token do DOM caso o cookie falhe
             if (!cookieValue) {
                 const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
                 if (csrfInput) cookieValue = csrfInput.value;
@@ -288,7 +433,137 @@
             return cookieValue;
         }
 
-        // Controle do Modal
+        // --- Filtro ---
+        function aplicarFiltroData() {
+            document.getElementById('formFiltroData').submit();
+        }
+
+        // --- SISTEMA DE ALTERNÂNCIA DE ABAS ---
+        function alternarAba(nomeAba) {
+            document.querySelectorAll('.aba-conteudo').forEach(el => el.classList.add('hidden'));
+
+            const botoes = ['dashboard', 'transacoes', 'planejamento'];
+            botoes.forEach(aba => {
+                const btn = document.getElementById(`btn-aba-${aba}`);
+                if (btn) {
+                    btn.classList.remove('border-teal-600', 'text-teal-700', 'font-semibold');
+                    btn.classList.add('border-transparent', 'text-gray-500');
+                }
+            });
+
+            const abaSelecionada = document.getElementById(`aba-${nomeAba}`);
+            if (abaSelecionada) abaSelecionada.classList.remove('hidden');
+
+            const btnAtivo = document.getElementById(`btn-aba-${nomeAba}`);
+            if (btnAtivo) {
+                btnAtivo.classList.remove('border-transparent', 'text-gray-500');
+                btnAtivo.classList.add('border-teal-600', 'text-teal-700', 'font-semibold');
+            }
+
+            if (nomeAba === 'dashboard') {
+                carregarGraficos();
+            }
+        }
+
+        // --- RENDERIZAÇÃO DE GRÁFICOS (CHART.JS) ---
+        async function carregarGraficos() {
+            try {
+                // 📍 Pega o mês e o ano da URL atual (ex: ?mes=3&ano=2026)
+                const urlParams = new URLSearchParams(window.location.search);
+                const mes = urlParams.get('mes') || '';
+                const ano = urlParams.get('ano') || '';
+
+                // 🔧 CORREÇÃO 1: Requisição fetch ajustada com crases e ordem correta de execução
+                const response = await fetch(`/api/graficos-dados/?mes=${mes}&ano=${ano}`);
+                if (!response.ok) return;
+
+                // 🔧 CORREÇÃO 2: .json() é chamado após a resposta da API ser confirmada
+                const data = await response.json();
+
+                // 1. Gráfico de Rosca: Entradas vs Saídas
+                const ctxTipos = document.getElementById('chartTipos').getContext('2d');
+                const coresTipos = data.resumo_tipo.labels.map(label =>
+                    label === 'RECEITA' ? '#0d9488' : '#e11d48'
+                );
+
+                if (chartTiposInstance) chartTiposInstance.destroy();
+
+                chartTiposInstance = new Chart(ctxTipos, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.resumo_tipo.labels,
+                        datasets: [{
+                            data: data.resumo_tipo.valores,
+                            backgroundColor: coresTipos,
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let valor = context.raw || 0;
+                                        return `${context.label}: R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+
+                // 2. Gráfico de Barras Horizontais: Categoria de Despesas
+                const ctxCategorias = document.getElementById('chartCategorias').getContext('2d');
+
+                if (chartCategoriasInstance) chartCategoriasInstance.destroy();
+
+                chartCategoriasInstance = new Chart(ctxCategorias, {
+                    type: 'bar',
+                    data: {
+                        labels: data.categorias.labels,
+                        datasets: [{
+                            label: 'Gasto Total (R$)',
+                            data: data.categorias.valores,
+                            backgroundColor: '#e11d48',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        let valor = context.raw || 0;
+                                        return ` Total: R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { color: '#f3f4f6' },
+                                ticks: { callback: value => 'R$ ' + value }
+                            },
+                            y: { grid: { display: false } }
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Erro ao renderizar gráficos:', error);
+            }
+        }
+
+        // --- CONTROLE DE MODAIS ---
         function fecharModalSalario() {
             document.getElementById('modalSalario').classList.add('hidden');
         }
@@ -297,18 +572,36 @@
             document.getElementById('modalSalario').classList.remove('hidden');
         }
 
+        function abrirModalEdicao(id, descricao, valor, tipo) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editDescricao').value = descricao;
+            const valorStr = String(valor).replace(',', '.');
+            document.getElementById('editValor').value = parseFloat(valorStr);
+
+            if (tipo === 'RECEITA') {
+                document.getElementById('editTipoReceita').checked = true;
+            } else {
+                document.getElementById('editTipoDespesa').checked = true;
+            }
+
+            document.getElementById('modalEditar').classList.remove('hidden');
+        }
+
+        function fecharModalEdicao() {
+            document.getElementById('modalEditar').classList.add('hidden');
+        }
+
+        // --- SUBMISSÃO DE FORMULÁRIOS (API) ---
+
         // 1. Salvar Salário
         document.getElementById('formSalario').addEventListener('submit', async function (e) {
             e.preventDefault();
-            const salarioInput = document.getElementById('inputSalario').value;
-            const salarioVal = parseFloat(salarioInput);
+            const salarioVal = parseFloat(document.getElementById('inputSalario').value);
 
             if (isNaN(salarioVal) || salarioVal <= 0) {
                 alert('Por favor, insira um valor de salário válido.');
                 return;
             }
-
-            const payload = { renda_mensal: salarioVal };
 
             try {
                 const response = await fetch('/api/orcamento/', {
@@ -318,18 +611,16 @@
                         'X-CSRFToken': getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ renda_mensal: salarioVal })
                 });
 
                 if (response.ok) {
                     window.location.reload();
                 } else {
                     const erroData = await response.json();
-                    console.error('Erro retornado pela API:', erroData);
                     alert(`Erro ao salvar salário: ${JSON.stringify(erroData)}`);
                 }
             } catch (error) {
-                console.error('Erro de conexão:', error);
                 alert('Erro ao conectar com o servidor.');
             }
         });
@@ -338,8 +629,9 @@
         document.getElementById('formTransacao').addEventListener('submit', async function (e) {
             e.preventDefault();
 
+            const categoriaSelecionada = document.getElementById('categoria').value;
             const tipoSelecionado = document.querySelector('input[name="tipo_radio"]:checked').value;
-            const dataHoje = new Date().toISOString().split('T')[0];
+            const dataHoje = new Date().toLocaleDateString('sv-SE');
             const valorVal = parseFloat(document.getElementById('valor').value);
 
             const payload = {
@@ -347,7 +639,7 @@
                 valor: valorVal,
                 tipo: tipoSelecionado,
                 data: dataHoje,
-                categoria: "Geral",
+                categoria: categoriaSelecionada,
                 pago: true
             };
 
@@ -366,38 +658,14 @@
                     window.location.reload();
                 } else {
                     const erroData = await response.json();
-                    console.error('Erro retornado pela API:', erroData);
                     alert(`Erro ao registrar movimentação: ${JSON.stringify(erroData)}`);
                 }
             } catch (error) {
-                console.error('Erro de conexão:', error);
                 alert('Erro de conexão ao salvar transação.');
             }
         });
 
-        //3. Controle do Modal de Edição
-        function abrirModalEdicao(id, descricao, valor, tipo) {
-            document.getElementById('editId').value = id;
-            document.getElementById('editDescricao').value = descricao;
-
-            // Converte para String antes do replace para evitar Uncaught TypeError
-            const valorStr = String(valor).replace(',', '.');
-            document.getElementById('editValor').value = parseFloat(valorStr);
-
-            if (tipo === 'RECEITA') {
-                document.getElementById('editTipoReceita').checked = true;
-            } else {
-                document.getElementById('editTipoDespesa').checked = true;
-            }
-
-            document.getElementById('modalEditar').classList.remove('hidden');
-        }
-
-        function fecharModalEdicao() {
-            document.getElementById('modalEditar').classList.add('hidden');
-        }
-
-        //3.1. Submissão da Edição (PATCH na API REST)
+        // 3. Submissão da Edição (PATCH)
         document.getElementById('formEditarTransacao').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -413,7 +681,7 @@
 
             try {
                 const response = await fetch(`/api/transacoes/${id}/`, {
-                    method: 'PATCH', // PATCH altera apenas os campos informados
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': getCsrfToken(),
@@ -426,20 +694,16 @@
                     window.location.reload();
                 } else {
                     const erroData = await response.json();
-                    console.error('Erro retornado pela API:', erroData);
                     alert(`Erro ao atualizar transação: ${JSON.stringify(erroData)}`);
                 }
             } catch (error) {
-                console.error('Erro de conexão:', error);
                 alert('Erro de conexão ao tentar atualizar transação.');
             }
         });
 
         // 4. Deletar Transação
         async function deletarTransacao(id) {
-            if (!confirm('Tem certeza que deseja excluir esta transação?')) {
-                return;
-            }
+            if (!confirm('Tem certeza que deseja excluir esta transação?')) return;
 
             try {
                 const response = await fetch(`/api/transacoes/${id}/`, {
@@ -456,10 +720,14 @@
                     alert('Erro ao excluir a transação.');
                 }
             } catch (error) {
-                console.error('Erro na requisição:', error);
                 alert('Erro de conexão ao tentar excluir.');
             }
         }
+
+        // Inicialização ao carregar a página
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarGraficos();
+        });
     </script>
 </body>
 
