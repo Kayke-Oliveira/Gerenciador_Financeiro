@@ -24,9 +24,7 @@ class Transacao(models.Model):
     ]
 
     # Campos da tabela do banco de dados
-    usuario = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='transacoes')
-
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transacoes')
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     descricao = models.CharField(max_length=255)
     # Aceita até 99.999.999,99
@@ -37,6 +35,15 @@ class Transacao(models.Model):
     categoria = models.CharField(max_length=50, choices=CATEGORIA_CHOICES, default='Outros')
     # Salva a data/hora do cadastro automaticamente
     criado_em = models.DateTimeField(auto_now_add=True)
+
+    #Esse campo evita duplicatas de OFX
+    transacao_id_externo = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        unique=True,
+        help_text="ID único da transação importada via OFX (FITID)"
+    )
 
     def __str__(self):
         return f'{self.tipo} - {self.descricao} - R$ {self.valor}'

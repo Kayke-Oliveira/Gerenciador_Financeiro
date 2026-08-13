@@ -2,20 +2,32 @@ import pandas as pd
 from datetime import datetime
 
 from django.shortcuts import render, redirect
+
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+
 from django.db.models import Sum
+
+from django.http import JsonResponse
+
+from django.views.decorators.http import require_POST
 
 from rest_framework import viewsets
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated  # Importação corrigida!
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Transacao, OrcamentoMensal
 from .services import calcular_planejamento_financeiro
 from .serializers import TransacaoSerializer, OrcamentoSerializer
+
+import csv
+import io
+from ofxparse import OfxParser
+
+
 
 
 # ==========================================
@@ -224,3 +236,155 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+# View de Extrato
+# Função auxiliar simples para inferir categoria básica
+def categorizar_transacao(descricao):
+    desc = descricao.lower()
+    if any(k in desc for k in ['uber', '99', 'posto', 'shell', 'combustivel']):
+        return 'Transporte'
+    elif any(k in desc for k in ['ifood', 'restaurante', 'mcdonalds', 'supermercado', 'mercado']):
+        return 'Alimentação'
+    elif any(k in desc for k in ['aluguel', 'condominio', 'luz', 'agua', 'internet', 'claro', 'vivo']):
+        return 'Moradia'
+    elif any(k in desc for k in ['salario', 'rendimento', 'provento']):
+        return 'Salário'
+    return 'Outros'
+
+@login_required
+@require_POST
+def importar_extrato(request):
+    if 'extrato' not in request.FILES:
+        return JsonResponse({'erro': 'Nenhum arquivo enviado.'}, status=400)
+
+    arquivo = request.FILES['extrato']
+    nome_arquivo = arquivo.name.lower()
+
+    transacoes_criadas = 0
+    transacoes_ignoradas = 0
+
+    try:
+        # ----------------------------------------------------
+        # 1. PROCESSAMENTO DE ARQUIVOS OFX
+        # ----------------------------------------------------
+        if nome_arquivo.endswith('.ofx'):
+            ofx = OfxParser.parse(arquivo)
+            conta = ofx.account
+            statement = conta.statement
+
+            for t in statement.transactions:
+                # Evita importar transações repetidas se o ID já existir
+                if t.id and Transacao.objects.filter(transacao_id_externo=t.id, usuario=request.user).exists():
+                    transacoes_ignoradas += 1
+                    continue
+
+                # OFX usa valores negativos para saídas e positivos para entradas
+                tipo = 'RECEITA' if t.amount > 0 else 'DESPESA'
+                valor = abs(float(t.amount))
+                categoria = categorizar_transacao(t.memo or t.payee or '')
+
+                Transacao.objects.create(
+                    usuario=request.user,
+                    descricao=(t.memo or t.payee or 'Importado via OFX')[:100],
+                    valor=valor,
+                    tipo=tipo,
+                    categoria=categoria,
+                    data=t.date.date(),
+                    transacao_id_externo=t.id
+                )
+                transacoes_criadas += 1
+
+        # ----------------------------------------------------
+        # 2. PROCESSAMENTO DE ARQUIVOS CSV
+        # ----------------------------------------------------
+        elif nome_arquivo.endswith('.csv'):
+            # Lê o conteúdo lidando com possíveis encodings (utf-8 ou latin-1)
+            try:
+                conteudo = arquivo.read().decode('utf-8')
+            except UnicodeDecodeError:
+                arquivo.seek(0)
+                conteudo = arquivo.read().decode('latin-1')
+
+            # Detecta o delimitador (; ou ,)
+            delimitador = ';' if ';' in conteudo else ','
+            stream = io.StringIO(conteudo)
+            leitor = csv.reader(stream, delimiter=delimitador)
+
+            for linha in leitor:
+                # Pula linhas vazias ou muito curtas
+                if not linha or len(linha) < 2:
+                    continue
+
+                # Normaliza todos os campos da linha
+                colunas = [c.strip() for c in linha if c.strip()]
+
+                valor_float = None
+                data_str = None
+                descricao_partes = []
+
+                for item in colunas:
+                    # 1. Tenta identificar a DATA
+                    if not data_str and ('/' in item or '-' in item) and len(item) <= 10:
+                        # Checa se parece uma data (ex: 12/08/2026 ou 2026-08-12)
+                        data_str = item
+                        continue
+
+                    # 2. Tenta identificar o VALOR NUMÉRICO
+                    if valor_float is None:
+                        # Limpa formatação brasileira: "R$ 1.250,50" -> "1250.50"
+                        item_num = item.replace('R$', '').replace(' ', '')
+                        
+                        # Trata formato pt-BR: remove ponto de milhar e substitui vírgula por ponto
+                        if ',' in item_num:
+                            item_num = item_num.replace('.', '').replace(',', '.')
+                        
+                        try:
+                            # Testa se é um número válido
+                            val_test = float(item_num)
+                            # Se for o ano da data (ex: 2026), ignora como valor
+                            if not (data_str and item in data_str):
+                                valor_float = val_test
+                                continue
+                        except ValueError:
+                            pass
+
+                    # 3. O que sobrou vira parte da DESCRIÇÃO
+                    descricao_partes.append(item)
+
+                # Se encontrou pelo menos um valor válido na linha, salva a transação
+                if valor_float is not None and valor_float != 0:
+                    descricao = " ".join(descricao_partes) if descricao_partes else "Importado via CSV"
+
+                    # Formata a data para YYYY-MM-DD
+                    if data_str and '/' in data_str:
+                        partes = data_str.split('/')
+                        if len(partes) == 3:
+                            # Trata DD/MM/YYYY
+                            data_str = f"{partes[2]}-{partes[1].zfill(2)}-{partes[0].zfill(2)}"
+                    elif not data_str:
+                        from datetime import date
+                        data_str = date.today().strftime('%Y-%m-%d')
+
+                    tipo = 'RECEITA' if valor_float > 0 else 'DESPESA'
+                    valor = abs(valor_float)
+
+                    Transacao.objects.create(
+                        usuario=request.user,
+                        descricao=descricao[:100],
+                        valor=valor,
+                        tipo=tipo,
+                        categoria=categorizar_transacao(descricao),
+                        data=data_str
+                    )
+                    transacoes_criadas += 1
+
+        else:
+            return JsonResponse({'erro': 'Formato não suportado. Envie um arquivo .OFX ou .CSV.'}, status=400)
+
+        return JsonResponse({
+            'sucesso': True,
+            'mensagem': f'{transacoes_criadas} transações importadas com sucesso! ({transacoes_ignoradas} duplicadas ignoradas)'
+        })
+
+    except Exception as e:
+        return JsonResponse({'erro': f'Erro ao processar arquivo: {str(e)}'}, status=500)

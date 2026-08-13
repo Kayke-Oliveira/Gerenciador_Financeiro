@@ -60,7 +60,7 @@
     <!-- CONTAINER PRINCIPAL -->
     <div class="max-w-4xl w-full space-y-6">
 
-        <!-- CABEÇALHO TEAL -->
+        <!-- CABEÇALHO -->
         <header
             class="bg-teal-700 text-white text-center py-6 rounded-t-xl shadow-md flex justify-between items-center px-8">
             <h1 class="text-2xl font-bold tracking-wide">Controle Financeiro</h1>
@@ -246,6 +246,10 @@
                         class="w-full lg:w-auto bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
                         Adicionar
                     </button>
+
+                    <button onclick="abrirModalImportacao()" class="w-full lg:w-auto bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
+                        Importar Extrato
+                    </button>
                 </form>
             </div>
 
@@ -406,6 +410,39 @@
         </div>
     </div>
 
+    <!-- MODAL DE IMPORTAÇÃO DE EXTRATO -->
+    <div id="modalImportacao" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Importar Extrato Bancário</h3>
+                <button onclick="fecharModalImportacao()" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <p class="text-xs text-gray-500 mb-4">
+                Envie o arquivo <strong>.OFX</strong> ou <strong>.CSV</strong> baixado no aplicativo do seu banco.
+            </p>
+
+            <form id="formImportarExtrato" class="space-y-4">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-teal-600 transition">
+                    <input type="file" id="inputArquivoExtrato" accept=".ofx, .csv" required class="hidden" onchange="atualizarNomeArquivo(this)">
+                    <label for="inputArquivoExtrato" class="cursor-pointer flex flex-col items-center">
+                        <span class="text-3xl mb-2">📄</span>
+                        <span id="nomeArquivoSelecionado" class="text-sm font-medium text-gray-700">Clique para selecionar o arquivo</span>
+                        <span class="text-xs text-gray-400 mt-1">Suporta .OFX e .CSV</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" id="btnEnviarImportacao" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                        Processar e Salvar
+                    </button>
+                    <button type="button" onclick="fecharModalImportacao()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- JAVASCRIPT DE INTEGRAÇÃO COM A API E NAVEGAÇÃO -->
     <script>
@@ -728,6 +765,66 @@
         document.addEventListener('DOMContentLoaded', () => {
             carregarGraficos();
         });
+
+        // --- CONTROLE DO MODAL DE IMPORTAÇÃO ---
+    function abrirModalImportacao() {
+        document.getElementById('modalImportacao').classList.remove('hidden');
+    }
+
+    function fecharModalImportacao() {
+        document.getElementById('modalImportacao').classList.add('hidden');
+        document.getElementById('formImportarExtrato').reset();
+        document.getElementById('nomeArquivoSelecionado').innerText = 'Clique para selecionar o arquivo';
+    }
+
+    function atualizarNomeArquivo(input) {
+        if (input.files && input.files[0]) {
+            document.getElementById('nomeArquivoSelecionado').innerText = input.files[0].name;
+        }
+    }
+
+    // --- SUBMISSÃO DO ARQUIVO PARA A API ---
+    document.getElementById('formImportarExtrato').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const inputArquivo = document.getElementById('inputArquivoExtrato');
+        if (!inputArquivo.files.length) {
+            alert('Por favor, selecione um arquivo.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('extrato', inputArquivo.files[0]);
+
+        const btnEnviar = document.getElementById('btnEnviarImportacao');
+        btnEnviar.innerText = 'Processando...';
+        btnEnviar.disabled = true;
+
+        try {
+            const response = await fetch('/api/importar-extrato/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.mensagem);
+                window.location.reload();
+            } else {
+                alert(`Erro: ${data.erro}`);
+            }
+        } catch (error) {
+            alert('Erro de conexão ao enviar o extrato.');
+        } finally {
+            btnEnviar.innerText = 'Processar e Salvar';
+            btnEnviar.disabled = false;
+        }
+    });
     </script>
 </body>
 
