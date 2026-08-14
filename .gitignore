@@ -18,3 +18,7 @@ __pycache__/
 
 # Variáveis de ambiente / Segredos
 .env
+
+# Documentação auxiliar em Markdown (exceto README)
+*.md
+!README.md

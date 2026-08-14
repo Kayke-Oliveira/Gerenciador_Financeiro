@@ -137,7 +137,7 @@
                         <span>Entradas</span>
                         <span class="text-emerald-600 font-bold">⬆</span>
                     </div>
-                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.entradas|default:"0.00" }}
+                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.entradas|floatformat:2|default:"0.00" }}
                     </p>
                 </div>
 
@@ -146,7 +146,7 @@
                         <span>Saídas</span>
                         <span class="text-rose-600 font-bold">⬇</span>
                     </div>
-                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saidas|default:"0.00" }}
+                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saidas|floatformat:2|default:"0.00"}}
                     </p>
                 </div>
 
@@ -155,7 +155,7 @@
                         <span>Total Saldo</span>
                         <span class="font-bold text-teal-600">$</span>
                     </div>
-                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saldo|default:"0.00" }}
+                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saldo|floatformat:2|default:"0.00"}}
                     </p>
                 </div>
             </div>
@@ -255,6 +255,13 @@
 
             <!-- TABELA DE TRANSAÇÕES -->
             <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-700">Histórico de Lançamentos</h3>
+                    <button onclick="deletarTodasTransacoes()"
+                        class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-2 rounded transition shadow-sm">
+                        🗑️ Excluir Todas
+                    </button>
+                </div>
                 <table class="w-full text-left border-collapse text-sm">
                     <thead>
                         <tr class="border-b border-gray-200 bg-gray-50 text-gray-600 font-semibold">
@@ -439,8 +446,37 @@
                     <button type="button" onclick="fecharModalImportacao()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
                         Cancelar
                     </button>
+                    <select id="selectBanco" name="banco" class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 bg-white">
+                        <option value="generico">Padrão / Outros Bancos</option>
+                        <option value="picpay">PicPay</option>
+                        <option value="nubank">Nubank</option>
+                        <option value="itau">Itaú</option>
+                        <option value="bradesco">Bradesco</option>
+                    </select>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO DE ARQUIVO JÁ IMPORTADO -->
+    <div id="modalConfirmarImportacao"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full text-center">
+            <span class="text-3xl mb-2 block">⚠️</span>
+            <h3 class="text-lg font-bold text-gray-800 mb-2">Arquivo já importado</h3>
+            <p class="text-sm text-gray-500 mb-6">
+                Você já fez o upload desse arquivo anteriormente. Deseja prosseguir?
+            </p>
+            <div class="flex gap-2">
+                <button id="btnConfirmarImportacaoSim"
+                    class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                    Sim
+                </button>
+                <button id="btnConfirmarImportacaoNao"
+                    class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2.5 rounded-lg text-sm transition">
+                    Não
+                </button>
+            </div>
         </div>
     </div>
 
@@ -775,6 +811,7 @@
         document.getElementById('modalImportacao').classList.add('hidden');
         document.getElementById('formImportarExtrato').reset();
         document.getElementById('nomeArquivoSelecionado').innerText = 'Clique para selecionar o arquivo';
+        arquivoImportacaoSelecionado = null;
     }
 
     function atualizarNomeArquivo(input) {
@@ -783,22 +820,18 @@
         }
     }
 
-    // --- SUBMISSÃO DO ARQUIVO PARA A API ---
-    document.getElementById('formImportarExtrato').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const inputArquivo = document.getElementById('inputArquivoExtrato');
-        if (!inputArquivo.files.length) {
-            alert('Por favor, selecione um arquivo.');
-            return;
-        }
+    // Arquivo escolhido no modal de importação (mantido para reenvio com confirmação)
+    let arquivoImportacaoSelecionado = null;
 
-        const formData = new FormData();
-        formData.append('extrato', inputArquivo.files[0]);
-
+    async function enviarArquivoExtrato(confirmar) {
         const btnEnviar = document.getElementById('btnEnviarImportacao');
         btnEnviar.innerText = 'Processando...';
         btnEnviar.disabled = true;
+
+        const formData = new FormData();
+        formData.append('extrato', arquivoImportacaoSelecionado);
+        formData.append('banco', document.getElementById('selectBanco').value);
+        if (confirmar) formData.append('confirmar', 'true');
 
         try {
             const response = await fetch('/api/importar-extrato/', {
@@ -812,6 +845,12 @@
 
             const data = await response.json();
 
+            // Arquivo já importado anteriormente: pede confirmação
+            if (response.status === 409 && data.ja_importado) {
+                document.getElementById('modalConfirmarImportacao').classList.remove('hidden');
+                return;
+            }
+
             if (response.ok) {
                 alert(data.mensagem);
                 window.location.reload();
@@ -824,7 +863,56 @@
             btnEnviar.innerText = 'Processar e Salvar';
             btnEnviar.disabled = false;
         }
+    }
+
+    // --- SUBMISSÃO DO ARQUIVO PARA A API ---
+    document.getElementById('formImportarExtrato').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const inputArquivo = document.getElementById('inputArquivoExtrato');
+        if (!inputArquivo.files.length) {
+            alert('Por favor, selecione um arquivo.');
+            return;
+        }
+
+        arquivoImportacaoSelecionado = inputArquivo.files[0];
+        await enviarArquivoExtrato(false);
     });
+
+    // --- MODAL DE CONFIRMAÇÃO DE ARQUIVO JÁ IMPORTADO ---
+    document.getElementById('btnConfirmarImportacaoSim').addEventListener('click', async function () {
+        document.getElementById('modalConfirmarImportacao').classList.add('hidden');
+        await enviarArquivoExtrato(true);
+    });
+
+    document.getElementById('btnConfirmarImportacaoNao').addEventListener('click', function () {
+        document.getElementById('modalConfirmarImportacao').classList.add('hidden');
+    });
+
+    // --- EXCLUIR TODAS AS TRANSAÇÕES ---
+    async function deletarTodasTransacoes() {
+        if (!confirm('Tem certeza que deseja excluir TODAS as suas transações? Esta ação não pode ser desfeita.')) return;
+
+        try {
+            const response = await fetch('/api/transacoes/limpar_todas/', {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(data.mensagem);
+                window.location.reload();
+            } else {
+                alert('Erro ao excluir as transações.');
+            }
+        } catch (error) {
+            alert('Erro de conexão ao tentar excluir.');
+        }
+    }
     </script>
 </body>
 

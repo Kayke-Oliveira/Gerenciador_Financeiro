@@ -63,3 +63,20 @@ class OrcamentoMensal(models.Model):
 
     def __str__(self):
         return f'Renda Cadastrada: R${self.renda_mensal}'
+
+
+class ArquivoImportado(models.Model):
+    """Registra o hash do conteúdo de cada extrato importado para detectar
+    tentativas de upload repetido do mesmo arquivo."""
+    usuario = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='arquivos_importados')
+
+    hash_arquivo = models.CharField(max_length=64)
+    nome_arquivo = models.CharField(max_length=255)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('usuario', 'hash_arquivo')
+
+    def __str__(self):
+        return f'{self.nome_arquivo} - {self.criado_em:%d/%m/%Y %H:%M}'
