@@ -30,7 +30,6 @@ class Transacao(models.Model):
     # Aceita até 99.999.999,99
     valor = models.DecimalField(max_digits=10, decimal_places=2)
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
-    pago = models.BooleanField(default=False)
     data = models.DateField()
     categoria = models.CharField(max_length=50, choices=CATEGORIA_CHOICES, default='Outros')
     # Salva a data/hora do cadastro automaticamente
@@ -80,3 +79,21 @@ class ArquivoImportado(models.Model):
 
     def __str__(self):
         return f'{self.nome_arquivo} - {self.criado_em:%d/%m/%Y %H:%M}'
+
+class MetaFinanceira(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='metas')
+    titulo = models.CharField(max_length=100)
+    valor_objetivo = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_atual = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    aporte_mensal_desejado = models.DecimalField(max_digits=10, decimal_places=2)
+    prazo_meses = models.IntegerField()
+    data_criacao = models.DateTimeField(auto_now_add = True)
+
+    def __str__(self):
+        return f'{self.titulo} - {self.usuario.username}'
+
+    @property
+    def progresso_percentual(self):
+        if self.valor_objetivo > 0:
+            return round((self.valor_atual / self.valor_objetivo) * 100, 1)
+        return 0

@@ -18,10 +18,11 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Transacao, OrcamentoMensal, ArquivoImportado
-from .serializers import TransacaoSerializer, OrcamentoSerializer
+from .models import Transacao, OrcamentoMensal, ArquivoImportado, MetaFinanceira
+from .serializers import TransacaoSerializer, OrcamentoSerializer, MetaSerializer
 from .services.dashboard_service import DashboardService
 from .services.extrato_service import ExtratoService, FormatoNaoSuportadoError
+from .services.planejamento_service import PlanejamentoService
 
 
 # ==========================================
@@ -77,6 +78,15 @@ class GraficosDataAPIView(APIView):
         return Response(dados)
 
 
+class MetaViewSet(viewsets.ModelViewSet):
+    serializer_class = MetaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return MetaFinanceira.objects.filter(usuario=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
 # ==========================================
 # VIEWS WEB (HTML)
 # ==========================================
@@ -104,11 +114,23 @@ def pagina_inicial(request):
     totais = DashboardService.resumo_mensal(transacoes)
     orcamento = OrcamentoMensal.objects.filter(usuario=request.user).last()
     planejamento = DashboardService.planejamento_financeiro(orcamento)
+    metas = MetaFinanceira.objects.filter(usuario=request.user)
+
+    metas_com_diagnostico = []
+    for meta in metas:
+        try:
+            diag = PlanejamentoService.calcular_diagnostico_meta(
+                meta.id, request.user, mes_selecionado, ano_selecionado
+            )
+        except Exception:
+            diag = {'status': 'Sem dados', 'mensagem': 'Sem dados suficientes para diagnostico.'}
+        metas_com_diagnostico.append({'meta': meta, 'diagnostico': diag})
 
     contexto = {
         'transacoes': transacoes,
         'planejamento': planejamento,
         'totais': totais,
+        'metas_com_diagnostico': metas_com_diagnostico,
         'mes_selecionado': mes_selecionado,
         'ano_selecionado': ano_selecionado,
 
@@ -213,3 +235,7 @@ def importar_extrato(request):
         'sucesso': True,
         'mensagem': f'{resultado.criadas} transações importadas com sucesso! ({resultado.ignoradas} duplicadas ignoradas)'
     })
+
+@login_required
+def tela_planejamento(request):
+    return redirect('index')

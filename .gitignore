@@ -18,7 +18,20 @@ __pycache__/
 
 # Variáveis de ambiente / Segredos
 .env
+.env.local
 
-# Documentação auxiliar em Markdown (exceto README)
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Arquivos estáticos coletados (collectstatic)
+staticfiles/
+
+# Documentacao auxiliar em Markdown (exceto README e docs do projeto)
 *.md
 !README.md
+!DOCUMENTACAO.md
+!MANUAL_ERROS_CORRECOES.md

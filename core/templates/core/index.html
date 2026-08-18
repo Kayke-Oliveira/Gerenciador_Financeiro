@@ -14,6 +14,31 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+
+        /* Transição suave entre abas */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .aba-animate {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        /* Toast notifications */
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(80px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(0); }
+            to   { opacity: 0; transform: translateX(80px); }
+        }
+        .toast-enter {
+            animation: toastIn 0.4s ease-out forwards;
+        }
+        .toast-exit {
+            animation: toastOut 0.4s ease-in forwards;
+        }
     </style>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -247,7 +272,7 @@
                         Adicionar
                     </button>
 
-                    <button onclick="abrirModalImportacao()" class="w-full lg:w-auto bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
+                    <button type="button" onclick="abrirModalImportacao()" class="w-full lg:w-auto bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
                         Importar Extrato
                     </button>
                 </form>
@@ -320,6 +345,7 @@
              ========================================== -->
         <div id="aba-planejamento" class="aba-conteudo hidden space-y-6">
             {% if planejamento %}
+            <!-- CARDS DE RECOMENDAÇÃO BASEADOS NO SALÁRIO -->
             <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
                 <h3 class="text-xs font-bold text-teal-700 uppercase tracking-wider mb-4">
                     Planejamento Recomendado (Salário Base: R$ {{planejamento.salario}})
@@ -352,6 +378,78 @@
                     </div>
                 </div>
             </div>
+
+            <!-- SEÇÃO DE METAS FINANCEIRAS PERSONALIZADAS -->
+            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
+                <div class="flex items-center justify-between border-b border-gray-200 pb-3">
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">
+                        🎯 Suas Metas e Objetivos
+                    </h3>
+                    <button onclick="abrirModalMeta()"
+                        class="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-4 py-2 rounded transition shadow-sm">
+                        + Nova Meta
+                    </button>
+                </div>
+
+                <!-- LISTA DE METAS CADASTRADAS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for item in metas_com_diagnostico %}
+                    {% with meta=item.meta diag=item.diagnostico %}
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h4 class="font-semibold text-gray-800 text-base">{{ meta.titulo }}</h4>
+                                    {% if diag.status == 'Crítico' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-rose-100 text-rose-700" title="{{ diag.mensagem }}">Crítico</span>
+                                    {% elif diag.status == 'Excelente' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700" title="{{ diag.mensagem }}">Excelente</span>
+                                    {% elif diag.status == 'Próximo' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700" title="{{ diag.mensagem }}">Próximo</span>
+                                    {% elif diag.status == 'Longe' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-gray-200 text-gray-600" title="{{ diag.mensagem }}">Longe</span>
+                                    {% elif diag.status == 'Neutro' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-700" title="{{ diag.mensagem }}">Neutro</span>
+                                    {% endif %}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs bg-teal-100 text-teal-800 font-medium px-2 py-0.5 rounded">
+                                        Alvo: R$ {{ meta.valor_objetivo|floatformat:2 }}
+                                    </span>
+                                    <button onclick="abrirModalEditarMeta('{{ meta.id }}', '{{ meta.titulo }}', '{{ meta.valor_objetivo }}', '{{ meta.valor_atual }}', '{{ meta.prazo_meses }}')"
+                                        class="text-gray-400 hover:text-teal-600 transition" title="Editar Meta">
+                                        ✏️
+                                    </button>
+                                    <button onclick="deletarMeta('{{ meta.id }}')"
+                                        class="text-gray-400 hover:text-rose-600 transition" title="Excluir Meta">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-3">
+                                Prazo: {{ meta.prazo_meses }} meses | Aporte sugerido: <strong>R$ {{ meta.aporte_mensal_desejado|floatformat:2 }}/mês</strong>
+                            </p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                <span>Acumulado: R$ {{ meta.valor_atual|floatformat:2 }}</span>
+                                <span>{{ meta.progresso_percentual|floatformat:0 }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-teal-600 h-2 rounded-full" style="width: {{meta.progresso_percentual}}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% empty %}
+                    <div class="col-span-2 py-6 text-center text-gray-400 italic">
+                        Nenhuma meta cadastrada ainda. Clique em "+ Nova Meta" acima para começar a planejar seus objetivos!
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
             {% else %}
             <div class="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
                 <p class="text-gray-500 mb-4">Você ainda não configurou seu salário mensal para ver as
@@ -367,6 +465,102 @@
 
     </div>
 
+
+    <!-- MODAL DE CADASTRAR META -->
+    <div id="modalMeta" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Nova Meta Financeira</h3>
+                <button onclick="fecharModalMeta()" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <form id="formMeta" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Título da Meta</label>
+                    <input type="text" id="metaTitulo" required placeholder="Ex: Viagem de Férias, Troca de Carro..."
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Alvo (R$)</label>
+                    <input type="number" step="0.01" id="metaValorAlvo" required placeholder="10000.00"
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Já Acumulado (R$)</label>
+                    <input type="number" step="0.01" id="metaValorAtual" value="0.00"
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Prazo para Alcançar (Meses)</label>
+                    <input type="number" id="metaPrazoMeses" min="1" required placeholder="12"
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit"
+                        class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+                        Cadastrar Meta
+                    </button>
+                    <button type="button" onclick="fecharModalMeta()"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDITAR META -->
+    <div id="modalEditarMeta" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-gray-800">Editar Meta</h3>
+                <button onclick="fecharModalEditarMeta()" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+
+            <form id="formEditarMeta" class="space-y-4">
+                <input type="hidden" id="editMetaId">
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Título da Meta</label>
+                    <input type="text" id="editMetaTitulo" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Alvo (R$)</label>
+                    <input type="number" step="0.01" id="editMetaValorObjetivo" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Já Acumulado (R$)</label>
+                    <input type="number" step="0.01" id="editMetaValorAtual"
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Prazo para Alcançar (Meses)</label>
+                    <input type="number" id="editMetaPrazoMeses" min="1" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button type="submit"
+                        class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+                        Salvar Alterações
+                    </button>
+                    <button type="button" onclick="fecharModalEditarMeta()"
+                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- MODAL DE EDIÇÃO DE TRANSAÇÃO -->
     <div id="modalEditar"
@@ -439,6 +633,18 @@
                     </label>
                 </div>
 
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Banco / Formato</label>
+                    <select id="selectBanco" name="banco" class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 bg-white">
+                        <option value="generico">Padrão / Outros Bancos</option>
+                        <option value="picpay">PicPay</option>
+                        <option value="nubank">Nubank</option>
+                        <option value="itau">Itaú</option>
+                        <option value="bradesco">Bradesco</option>
+                        <option value="santander">Santander</option>
+                    </select>
+                </div>
+
                 <div class="flex gap-2 pt-2">
                     <button type="submit" id="btnEnviarImportacao" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
                         Processar e Salvar
@@ -446,13 +652,6 @@
                     <button type="button" onclick="fecharModalImportacao()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
                         Cancelar
                     </button>
-                    <select id="selectBanco" name="banco" class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 bg-white">
-                        <option value="generico">Padrão / Outros Bancos</option>
-                        <option value="picpay">PicPay</option>
-                        <option value="nubank">Nubank</option>
-                        <option value="itau">Itaú</option>
-                        <option value="bradesco">Bradesco</option>
-                    </select>
                 </div>
             </form>
         </div>
@@ -480,13 +679,82 @@
         </div>
     </div>
 
+    <!-- MODAL DE CONFIRMAÇÃO GENÉRICO -->
+    <div id="modalConfirmarGenerico"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full text-center">
+            <span class="text-3xl mb-2 block">⚠️</span>
+            <h3 id="tituloConfirmarGenerico" class="text-lg font-bold text-gray-800 mb-2">Tem certeza?</h3>
+            <p id="mensagemConfirmarGenerico" class="text-sm text-gray-500 mb-6"></p>
+            <div class="flex gap-2">
+                <button id="btnConfirmarGenericoSim"
+                    class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                    Sim
+                </button>
+                <button id="btnConfirmarGenericoNao"
+                    class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2.5 rounded-lg text-sm transition">
+                    Não
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed top-5 right-5 z-[70] flex flex-col gap-3 pointer-events-none"></div>
+
     <!-- JAVASCRIPT DE INTEGRAÇÃO COM A API E NAVEGAÇÃO -->
     <script>
-        // Guardas Globais para Instâncias dos Gráficos (evita erro de re-renderização no Canvas)
         let chartTiposInstance = null;
         let chartCategoriasInstance = null;
 
-        // Função auxiliar para obter o CSRF Token dos Cookies do Django
+        function mostrarToast(mensagem, tipo = 'sucesso') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+
+            const cores = tipo === 'sucesso'
+                ? 'bg-teal-600 border-teal-700 text-white'
+                : 'bg-rose-600 border-rose-700 text-white';
+
+            const icone = tipo === 'sucesso' ? '&#10003;' : '&#10007;';
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg border ${cores} toast-enter text-sm font-medium max-w-sm`;
+            toast.innerHTML = `
+                <span class="text-base font-bold">${icone}</span>
+                <span class="flex-1">${mensagem}</span>
+                <button onclick="this.parentElement.remove()" class="ml-2 text-white/70 hover:text-white text-lg font-bold leading-none">&times;</button>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                toast.addEventListener('animationend', () => toast.remove());
+            }, 4000);
+        }
+
+        function confirmarAcao(mensagem) {
+            return new Promise(resolve => {
+                document.getElementById('mensagemConfirmarGenerico').textContent = mensagem;
+                document.getElementById('modalConfirmarGenerico').classList.remove('hidden');
+
+                const btnSim = document.getElementById('btnConfirmarGenericoSim');
+                const btnNao = document.getElementById('btnConfirmarGenericoNao');
+
+                function limpar() {
+                    document.getElementById('modalConfirmarGenerico').classList.add('hidden');
+                    btnSim.removeEventListener('click', onSim);
+                    btnNao.removeEventListener('click', onNao);
+                }
+
+                function onSim() { limpar(); resolve(true); }
+                function onNao() { limpar(); resolve(false); }
+
+                btnSim.addEventListener('click', onSim);
+                btnNao.addEventListener('click', onNao);
+            });
+        }
+
         function getCsrfToken() {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -506,14 +774,27 @@
             return cookieValue;
         }
 
-        // --- Filtro ---
         function aplicarFiltroData() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const aba = urlParams.get('aba');
+            if (aba) {
+                let inputAba = document.querySelector('#formFiltroData input[name="aba"]');
+                if (!inputAba) {
+                    inputAba = document.createElement('input');
+                    inputAba.type = 'hidden';
+                    inputAba.name = 'aba';
+                    document.getElementById('formFiltroData').appendChild(inputAba);
+                }
+                inputAba.value = aba;
+            }
             document.getElementById('formFiltroData').submit();
         }
 
-        // --- SISTEMA DE ALTERNÂNCIA DE ABAS ---
         function alternarAba(nomeAba) {
-            document.querySelectorAll('.aba-conteudo').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.aba-conteudo').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('aba-animate');
+            });
 
             const botoes = ['dashboard', 'transacoes', 'planejamento'];
             botoes.forEach(aba => {
@@ -525,7 +806,13 @@
             });
 
             const abaSelecionada = document.getElementById(`aba-${nomeAba}`);
-            if (abaSelecionada) abaSelecionada.classList.remove('hidden');
+            if (abaSelecionada) {
+                abaSelecionada.classList.remove('hidden');
+                abaSelecionada.style.opacity = '0';
+                requestAnimationFrame(() => {
+                    abaSelecionada.classList.add('aba-animate');
+                });
+            }
 
             const btnAtivo = document.getElementById(`btn-aba-${nomeAba}`);
             if (btnAtivo) {
@@ -533,27 +820,26 @@
                 btnAtivo.classList.add('border-teal-600', 'text-teal-700', 'font-semibold');
             }
 
+            const url = new URL(window.location);
+            url.searchParams.set('aba', nomeAba);
+            window.history.replaceState({}, '', url);
+
             if (nomeAba === 'dashboard') {
                 carregarGraficos();
             }
         }
 
-        // --- RENDERIZAÇÃO DE GRÁFICOS (CHART.JS) ---
         async function carregarGraficos() {
             try {
-                // 📍 Pega o mês e o ano da URL atual (ex: ?mes=3&ano=2026)
                 const urlParams = new URLSearchParams(window.location.search);
                 const mes = urlParams.get('mes') || '';
                 const ano = urlParams.get('ano') || '';
 
-                // 🔧 CORREÇÃO 1: Requisição fetch ajustada com crases e ordem correta de execução
                 const response = await fetch(`/api/graficos-dados/?mes=${mes}&ano=${ano}`);
                 if (!response.ok) return;
 
-                // 🔧 CORREÇÃO 2: .json() é chamado após a resposta da API ser confirmada
                 const data = await response.json();
 
-                // 1. Gráfico de Rosca: Entradas vs Saídas
                 const ctxTipos = document.getElementById('chartTipos').getContext('2d');
                 const coresTipos = data.resumo_tipo.labels.map(label =>
                     label === 'RECEITA' ? '#0d9488' : '#e11d48'
@@ -590,7 +876,6 @@
                     }
                 });
 
-                // 2. Gráfico de Barras Horizontais: Categoria de Despesas
                 const ctxCategorias = document.getElementById('chartCategorias').getContext('2d');
 
                 if (chartCategoriasInstance) chartCategoriasInstance.destroy();
@@ -645,6 +930,15 @@
             document.getElementById('modalSalario').classList.remove('hidden');
         }
 
+        function abrirModalMeta() {
+            document.getElementById('modalMeta').classList.remove('hidden');
+        }
+
+        function fecharModalMeta() {
+            document.getElementById('modalMeta').classList.add('hidden');
+            document.getElementById('formMeta').reset();
+        }
+
         function abrirModalEdicao(id, descricao, valor, tipo) {
             document.getElementById('editId').value = id;
             document.getElementById('editDescricao').value = descricao;
@@ -664,15 +958,114 @@
             document.getElementById('modalEditar').classList.add('hidden');
         }
 
+        function abrirModalEditarMeta(id, titulo, valorObjetivo, valorAtual, prazoMeses) {
+            document.getElementById('editMetaId').value = id;
+            document.getElementById('editMetaTitulo').value = titulo;
+            document.getElementById('editMetaValorObjetivo').value = parseFloat(String(valorObjetivo).replace(',', '.'));
+            document.getElementById('editMetaValorAtual').value = parseFloat(String(valorAtual).replace(',', '.')) || 0;
+            document.getElementById('editMetaPrazoMeses').value = parseInt(prazoMeses);
+            document.getElementById('modalEditarMeta').classList.remove('hidden');
+        }
+
+        function fecharModalEditarMeta() {
+            document.getElementById('modalEditarMeta').classList.add('hidden');
+        }
+
         // --- SUBMISSÃO DE FORMULÁRIOS (API) ---
 
-        // 1. Salvar Salário
+        // Salvar Meta
+        document.getElementById('formMeta').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            // 1. Captura os valores dos inputs primeiro
+            const valorObjetivo = parseFloat(document.getElementById('metaValorAlvo').value) || 0;
+            const valorAtual = parseFloat(document.getElementById('metaValorAtual').value) || 0;
+            const prazoMeses = parseInt(document.getElementById('metaPrazoMeses').value) || 1; // Evita divisão por 0
+
+            // 2. Calcula o valor restante e o aporte mensal tratado
+            const valorRestante = valorObjetivo - valorAtual;
+            const aporteCalculado = valorRestante / prazoMeses;
+
+            const payload = {
+                titulo: document.getElementById('metaTitulo').value,
+                valor_objetivo: valorObjetivo,
+                valor_atual: valorAtual,
+                aporte_mensal_desejado: parseFloat(aporteCalculado.toFixed(2)),
+                prazo_meses: prazoMeses
+            };
+
+            try {
+                const response = await fetch('/api/metas/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const erroData = await response.json();
+                    mostrarToast(`Erro ao cadastrar meta: ${JSON.stringify(erroData)}`, 'erro');
+                }
+            } catch (error) {
+                mostrarToast('Erro de conexão ao tentar salvar meta.', 'erro');
+            }
+        });
+
+        // Editar Meta (PATCH)
+        document.getElementById('formEditarMeta').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('editMetaId').value;
+            const titulo = document.getElementById('editMetaTitulo').value;
+            const valorObjetivo = parseFloat(document.getElementById('editMetaValorObjetivo').value);
+            const valorAtual = parseFloat(document.getElementById('editMetaValorAtual').value) || 0;
+            const prazoMeses = parseInt(document.getElementById('editMetaPrazoMeses').value);
+
+            const valorRestante = valorObjetivo - valorAtual;
+            const aporteCalculado = valorRestante / prazoMeses;
+
+            const payload = {
+                titulo: titulo,
+                valor_objetivo: valorObjetivo,
+                valor_atual: valorAtual,
+                aporte_mensal_desejado: parseFloat(aporteCalculado.toFixed(2)),
+                prazo_meses: prazoMeses
+            };
+
+            try {
+                const response = await fetch(`/api/metas/${id}/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    const erroData = await response.json();
+                    mostrarToast(`Erro ao editar meta: ${JSON.stringify(erroData)}`, 'erro');
+                }
+            } catch (error) {
+                mostrarToast('Erro de conexão ao tentar editar meta.', 'erro');
+            }
+        });
+
+        // Salvar Salário
         document.getElementById('formSalario').addEventListener('submit', async function (e) {
             e.preventDefault();
             const salarioVal = parseFloat(document.getElementById('inputSalario').value);
 
             if (isNaN(salarioVal) || salarioVal <= 0) {
-                alert('Por favor, insira um valor de salário válido.');
+                mostrarToast('Por favor, insira um valor de salário válido.', 'erro');
                 return;
             }
 
@@ -691,14 +1084,14 @@
                     window.location.reload();
                 } else {
                     const erroData = await response.json();
-                    alert(`Erro ao salvar salário: ${JSON.stringify(erroData)}`);
+                    mostrarToast(`Erro ao salvar salário: ${JSON.stringify(erroData)}`, 'erro');
                 }
             } catch (error) {
-                alert('Erro ao conectar com o servidor.');
+                mostrarToast('Erro ao conectar com o servidor.', 'erro');
             }
         });
 
-        // 2. Adicionar Transação
+        // Adicionar Transação
         document.getElementById('formTransacao').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -713,7 +1106,6 @@
                 tipo: tipoSelecionado,
                 data: dataHoje,
                 categoria: categoriaSelecionada,
-                pago: true
             };
 
             try {
@@ -731,14 +1123,14 @@
                     window.location.reload();
                 } else {
                     const erroData = await response.json();
-                    alert(`Erro ao registrar movimentação: ${JSON.stringify(erroData)}`);
+                    mostrarToast(`Erro ao registrar movimentação: ${JSON.stringify(erroData)}`, 'erro');
                 }
             } catch (error) {
-                alert('Erro de conexão ao salvar transação.');
+                mostrarToast('Erro de conexão ao salvar transação.', 'erro');
             }
         });
 
-        // 3. Submissão da Edição (PATCH)
+        // Submissão da Edição (PATCH)
         document.getElementById('formEditarTransacao').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -767,16 +1159,16 @@
                     window.location.reload();
                 } else {
                     const erroData = await response.json();
-                    alert(`Erro ao atualizar transação: ${JSON.stringify(erroData)}`);
+                    mostrarToast(`Erro ao atualizar transação: ${JSON.stringify(erroData)}`, 'erro');
                 }
             } catch (error) {
-                alert('Erro de conexão ao tentar atualizar transação.');
+                mostrarToast('Erro de conexão ao tentar atualizar transação.', 'erro');
             }
         });
 
-        // 4. Deletar Transação
+        // Deletar Transação
         async function deletarTransacao(id) {
-            if (!confirm('Tem certeza que deseja excluir esta transação?')) return;
+            if (!await confirmarAcao('Tem certeza que deseja excluir esta transação?')) return;
 
             try {
                 const response = await fetch(`/api/transacoes/${id}/`, {
@@ -790,129 +1182,152 @@
                 if (response.ok) {
                     window.location.reload();
                 } else {
-                    alert('Erro ao excluir a transação.');
+                    mostrarToast('Erro ao excluir a transação.', 'erro');
                 }
             } catch (error) {
-                alert('Erro de conexão ao tentar excluir.');
+                mostrarToast('Erro de conexão ao tentar excluir.', 'erro');
             }
         }
 
-        // Inicialização ao carregar a página
+        // Deletar Meta
+        async function deletarMeta(id) {
+            if (!await confirmarAcao('Tem certeza que deseja excluir esta meta?')) return;
+
+            try {
+                const response = await fetch(`/api/metas/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    mostrarToast('Erro ao excluir a meta.', 'erro');
+                }
+            } catch (error) {
+                mostrarToast('Erro de conexão ao tentar excluir a meta.', 'erro');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            carregarGraficos();
+            const urlParams = new URLSearchParams(window.location.search);
+            const aba = urlParams.get('aba');
+            if (aba && aba !== 'dashboard') {
+                alternarAba(aba);
+            } else {
+                carregarGraficos();
+            }
         });
 
-        // --- CONTROLE DO MODAL DE IMPORTAÇÃO ---
-    function abrirModalImportacao() {
-        document.getElementById('modalImportacao').classList.remove('hidden');
-    }
-
-    function fecharModalImportacao() {
-        document.getElementById('modalImportacao').classList.add('hidden');
-        document.getElementById('formImportarExtrato').reset();
-        document.getElementById('nomeArquivoSelecionado').innerText = 'Clique para selecionar o arquivo';
-        arquivoImportacaoSelecionado = null;
-    }
-
-    function atualizarNomeArquivo(input) {
-        if (input.files && input.files[0]) {
-            document.getElementById('nomeArquivoSelecionado').innerText = input.files[0].name;
+        // MODAL DE IMPORTAÇÃO
+        function abrirModalImportacao() {
+            document.getElementById('modalImportacao').classList.remove('hidden');
         }
-    }
 
-    // Arquivo escolhido no modal de importação (mantido para reenvio com confirmação)
-    let arquivoImportacaoSelecionado = null;
+        function fecharModalImportacao() {
+            document.getElementById('modalImportacao').classList.add('hidden');
+            document.getElementById('formImportarExtrato').reset();
+            document.getElementById('nomeArquivoSelecionado').innerText = 'Clique para selecionar o arquivo';
+            arquivoImportacaoSelecionado = null;
+        }
 
-    async function enviarArquivoExtrato(confirmar) {
-        const btnEnviar = document.getElementById('btnEnviarImportacao');
-        btnEnviar.innerText = 'Processando...';
-        btnEnviar.disabled = true;
+        function atualizarNomeArquivo(input) {
+            if (input.files && input.files[0]) {
+                document.getElementById('nomeArquivoSelecionado').innerText = input.files[0].name;
+            }
+        }
 
-        const formData = new FormData();
-        formData.append('extrato', arquivoImportacaoSelecionado);
-        formData.append('banco', document.getElementById('selectBanco').value);
-        if (confirmar) formData.append('confirmar', 'true');
+        let arquivoImportacaoSelecionado = null;
 
-        try {
-            const response = await fetch('/api/importar-extrato/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            });
+        async function enviarArquivoExtrato(confirmar) {
+            const btnEnviar = document.getElementById('btnEnviarImportacao');
+            btnEnviar.innerText = 'Processando...';
+            btnEnviar.disabled = true;
 
-            const data = await response.json();
+            const formData = new FormData();
+            formData.append('extrato', arquivoImportacaoSelecionado);
+            formData.append('banco', document.getElementById('selectBanco').value);
+            if (confirmar) formData.append('confirmar', 'true');
 
-            // Arquivo já importado anteriormente: pede confirmação
-            if (response.status === 409 && data.ja_importado) {
-                document.getElementById('modalConfirmarImportacao').classList.remove('hidden');
+            try {
+                const response = await fetch('/api/importar-extrato/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.status === 409 && data.ja_importado) {
+                    document.getElementById('modalConfirmarImportacao').classList.remove('hidden');
+                    return;
+                }
+
+                if (response.ok) {
+                    mostrarToast(data.mensagem, 'sucesso');
+                    window.location.reload();
+                } else {
+                    mostrarToast(`Erro: ${data.erro}`, 'erro');
+                }
+            } catch (error) {
+                mostrarToast('Erro de conexão ao enviar o extrato.', 'erro');
+            } finally {
+                btnEnviar.innerText = 'Processar e Salvar';
+                btnEnviar.disabled = false;
+            }
+        }
+
+        document.getElementById('formImportarExtrato').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const inputArquivo = document.getElementById('inputArquivoExtrato');
+            if (!inputArquivo.files.length) {
+                mostrarToast('Por favor, selecione um arquivo.', 'erro');
                 return;
             }
 
-            if (response.ok) {
-                alert(data.mensagem);
-                window.location.reload();
-            } else {
-                alert(`Erro: ${data.erro}`);
-            }
-        } catch (error) {
-            alert('Erro de conexão ao enviar o extrato.');
-        } finally {
-            btnEnviar.innerText = 'Processar e Salvar';
-            btnEnviar.disabled = false;
-        }
-    }
+            arquivoImportacaoSelecionado = inputArquivo.files[0];
+            await enviarArquivoExtrato(false);
+        });
 
-    // --- SUBMISSÃO DO ARQUIVO PARA A API ---
-    document.getElementById('formImportarExtrato').addEventListener('submit', async function (e) {
-        e.preventDefault();
+        document.getElementById('btnConfirmarImportacaoSim').addEventListener('click', async function () {
+            document.getElementById('modalConfirmarImportacao').classList.add('hidden');
+            await enviarArquivoExtrato(true);
+        });
 
-        const inputArquivo = document.getElementById('inputArquivoExtrato');
-        if (!inputArquivo.files.length) {
-            alert('Por favor, selecione um arquivo.');
-            return;
-        }
+        document.getElementById('btnConfirmarImportacaoNao').addEventListener('click', function () {
+            document.getElementById('modalConfirmarImportacao').classList.add('hidden');
+        });
 
-        arquivoImportacaoSelecionado = inputArquivo.files[0];
-        await enviarArquivoExtrato(false);
-    });
+        async function deletarTodasTransacoes() {
+            if (!await confirmarAcao('Tem certeza que deseja excluir TODAS as suas transações? Esta ação não pode ser desfeita.')) return;
 
-    // --- MODAL DE CONFIRMAÇÃO DE ARQUIVO JÁ IMPORTADO ---
-    document.getElementById('btnConfirmarImportacaoSim').addEventListener('click', async function () {
-        document.getElementById('modalConfirmarImportacao').classList.add('hidden');
-        await enviarArquivoExtrato(true);
-    });
+            try {
+                const response = await fetch('/api/transacoes/limpar_todas/', {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
 
-    document.getElementById('btnConfirmarImportacaoNao').addEventListener('click', function () {
-        document.getElementById('modalConfirmarImportacao').classList.add('hidden');
-    });
-
-    // --- EXCLUIR TODAS AS TRANSAÇÕES ---
-    async function deletarTodasTransacoes() {
-        if (!confirm('Tem certeza que deseja excluir TODAS as suas transações? Esta ação não pode ser desfeita.')) return;
-
-        try {
-            const response = await fetch('/api/transacoes/limpar_todas/', {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
+                if (response.ok) {
+                    const data = await response.json();
+                    mostrarToast(data.mensagem, 'sucesso');
+                    window.location.reload();
+                } else {
+                    mostrarToast('Erro ao excluir as transações.', 'erro');
                 }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                alert(data.mensagem);
-                window.location.reload();
-            } else {
-                alert('Erro ao excluir as transações.');
+            } catch (error) {
+                mostrarToast('Erro de conexão ao tentar excluir.', 'erro');
             }
-        } catch (error) {
-            alert('Erro de conexão ao tentar excluir.');
         }
-    }
     </script>
 </body>
 
