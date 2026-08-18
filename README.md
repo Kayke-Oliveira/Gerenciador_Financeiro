@@ -1,45 +1,52 @@
-# 💰 Gerenciador de Finanças Pessoais
+# Gerenciador de Financas Pessoais
 
-Uma aplicação web completa para controle financeiro pessoal, desenvolvida com **Django** e **Django REST Framework** no backend, integrada a uma interface minimalista e responsiva estilizada com **Tailwind CSS**.
+Uma aplicacao web completa para controle financeiro pessoal, desenvolvida com **Django** e **Django REST Framework** no backend, integrada a uma interface minimalista e responsiva estilizada com **Tailwind CSS**.
 
-O sistema permite que o usuário registre sua renda mensal para obter um planejamento automático de distribuição do orçamento (investimentos, reserva de emergência, contas fixas e lazer), além de registrar e acompanhar suas entradas e saídas em tempo real.
-
----
-
-## ✨ Funcionalidades Atuais
-
-- 🎯 **Etapa de Onboarding:** Modal inicial para definição do salário mensal.
-- 📊 **Planejamento Recomendado:** Cálculo automático de metas baseado no salário:
-  - Meta de Viver de Renda Passiva ($200\times$ o salário)
-  - Reserva de Emergência ($6\times$ o salário)
-  - Divisão ideal do salário: **10%** Investimento, **60%** Contas Fixas e **30%** Lazer.
-- 💵 **Resumo Financeiro em Tempo Real:** Cards com totalizadores de Entradas, Saídas e Saldo Atual.
-- ➕ **Lançamento de Movimentações:** Cadastro rápido de receitas e despesas.
-- 📋 **Histórico de Transações:** Listagem de registros atualizada via API REST.
-- ⚡ **API RESTful:** Endpoints estruturados para integração com o front-end.
+O sistema permite que o usuario registre sua renda mensal para obter um planejamento automatico de distribuicao do orcamento (investimentos, reserva de emergencia, contas fixas e lazer), alem de registrar e acompanhar suas entradas e saidas em tempo real.
 
 ---
 
-## 🚀 Tecnologias Utilizadas
+## Funcionalidades
+
+- **Onboarding:** Modal inicial para definicao do salario mensal.
+- **Planejamento Recomendado:** Calculo automatico de metas baseado no salario:
+  - Meta de Renda Passiva (200x o salario)
+  - Reserva de Emergencia (6x o salario)
+  - Divisao ideal: 10% Investimento, 60% Contas Fixas e 30% Lazer.
+- **Resumo Financeiro em Tempo Real:** Cards com totalizadores de Entradas, Saidas e Saldo Atual.
+- **Graficos Interativos:** Grafico de rosca (entradas vs. saidas) e grafico de barras horizontais (despesas por categoria) via Chart.js.
+- **Lancamento de Movimentacoes:** Cadastro rapido de receitas e despesas com categorias.
+- **Historico de Transacoes:** Listagem de registros com edicao, exclusao e filtro por mes/ano.
+- **Metas Financeiras:** Criacao, edicao e exclusao de metas com acompanhamento de progresso e diagnostico preditivo (badge colorido por status).
+- **Importacao de Extratos:** Suporte a OFX e CSV (PicPay, Nubank, Itau, Bradesco, Santander) com deduplicacao automatica.
+- **Autenticacao:** Sistema completo de cadastro, login e logout com isolamento de dados por perfil.
+- **Toast Notifications:** Notificacoes visuais para feedback do usuario.
+- **Confirmacao Customizada:** Modal de confirmacao para acoes destrutivas.
+
+---
+
+## Stack Tecnologica
 
 - **Backend:** Python, Django, Django REST Framework (DRF)
-- **Frontend:** HTML5, JavaScript (Fetch API), Tailwind CSS
+- **Frontend:** HTML5, JavaScript (Fetch API), Tailwind CSS (CDN)
+- **Graficos:** Chart.js (CDN)
 - **Banco de Dados:** SQLite (Desenvolvimento)
-- **Outros:** UUID para identificação única de transações
+- **Processamento de Dados:** Pandas (agregacao para graficos)
+- **Leitura de Extratos:** ofxparse (OFX), parsers customizados (CSV)
 
 ---
 
-## 🛠️ Como Executar o Projeto Localmente
+## Como Executar o Projeto Localmente
 
-### Pré-requisitos
+### Pre-requisitos
 - Python 3.10+ instalado
 - Git instalado
 
 ### Passo a Passo
 
-1. **Clone o repositório:**
+1. **Clone o repositorio:**
    ```bash
-   git clone [https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git](https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git)
+   git clone https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git
    cd SEU-REPOSITORIO
    ```
 
@@ -54,14 +61,13 @@ O sistema permite que o usuário registre sua renda mensal para obter um planeja
    .\venv\Scripts\activate
    ```
 
-3. **Instale as dependências:**
+3. **Instale as dependencias:**
    ```bash
-   pip install django djangorestframework
+   pip install django djangorestframework pandas ofxparse
    ```
 
-4. **Execute as migrações do banco de dados:**
+4. **Execute as migracoes do banco de dados:**
    ```bash
-   python manage.py makemigrations
    python manage.py migrate
    ```
 
@@ -70,19 +76,41 @@ O sistema permite que o usuário registre sua renda mensal para obter um planeja
    python manage.py runserver
    ```
 
-6. Acesse a aplicação em `http://127.0.0.1:8000/` no seu navegador.
+6. Acesse a aplicacao em `http://127.0.0.1:8000/` no seu navegador.
 
 ---
 
-## 📌 Roadmap / Próximos Passos
+## Estrutura do Projeto
 
-- [ ] **Autenticação de Usuários:** Sistema completo de cadastro, login e logout com isolamento de dados por perfil.
-- [ ] **Gestão Avançada de Transações:** Funcionalidades de edição (UPDATE) e exclusão (DELETE) de lançamentos.
-- [ ] **Dashboard Interativo:** Gráficos visuais (Chart.js) de receitas vs. despesas com filtros por mês e ano.
-- [ ] **Categorização de Gastos:** Filtros e tags personalizadas (Alimentação, Transporte, Moradia, etc.).
+```
+gerenciador_financeiro/
+├── manage.py
+├── setup/                     # Configuracao do Django
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py / asgi.py
+│
+└── core/                      # Aplicacao principal
+    ├── models.py              # Modelos (Transacao, OrcamentoMensal, MetaFinanceira, ArquivoImportado)
+    ├── views.py               # Views Web + API Views
+    ├── serializers.py         # Serializadores REST
+    ├── urls.py                # Rotas da aplicacao
+    ├── services/              # Camada de servicos
+    │   ├── dashboard_service.py
+    │   ├── planejamento_service.py
+    │   └── extrato_service.py
+    ├── parsers/               # Parsers de importacao
+    │   ├── csv_parser.py
+    │   ├── ofx_parser.py
+    │   └── categorizador.py
+    └── templates/core/
+        ├── index.html         # Dashboard principal (SPA)
+        ├── login.html
+        └── register.html
+```
 
 ---
 
-## 📄 Licença
+## Licenca
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+Este projeto esta sob a licenca MIT. Veja o arquivo `LICENSE` para mais detalhes.

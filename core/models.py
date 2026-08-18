@@ -97,3 +97,28 @@ class MetaFinanceira(models.Model):
         if self.valor_objetivo > 0:
             return round((self.valor_atual / self.valor_objetivo) * 100, 1)
         return 0
+
+
+class ContaPagar(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contas_pagar')
+    descricao = models.CharField(max_length=255)
+    valor = models.DecimalField(max_digits=15, decimal_places=2)
+    data_vencimento = models.DateField()
+    categoria = models.CharField(max_length=50, choices=Transacao.CATEGORIA_CHOICES, default='Outros')
+    paga = models.BooleanField(default=False)
+    recorrente = models.BooleanField(default=False)
+    transacao_gerada = models.OneToOneField(
+        'Transacao',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='conta_origem'
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['data_vencimento']
+
+    def __str__(self):
+        status = 'Paga' if self.paga else 'Pendente'
+        return f'{self.descricao} - R$ {self.valor} ({status})'

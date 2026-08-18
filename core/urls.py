@@ -4,6 +4,7 @@ from core.views import (
     TransacaoViewSet, 
     OrcamentoViewSet,
     MetaViewSet, 
+    ContaPagarViewSet,
     pagina_inicial, 
     register_view, 
     login_view, 
@@ -18,6 +19,7 @@ router = DefaultRouter()
 router.register(r'transacoes', TransacaoViewSet, basename='transacao')
 router.register(r'orcamento', OrcamentoViewSet, basename='orcamento')
 router.register(r'metas', MetaViewSet, basename='meta')
+router.register(r'contas-pagar', ContaPagarViewSet, basename='conta-pagar')
 
 urlpatterns = [
     # Páginas Web (HTML)

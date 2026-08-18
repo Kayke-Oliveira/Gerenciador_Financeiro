@@ -1,5 +1,5 @@
 from rest_framework import serializers #serializers é o componente que traduz o json para a linguagem do django
-from .models import Transacao, OrcamentoMensal, MetaFinanceira
+from .models import Transacao, OrcamentoMensal, MetaFinanceira, ContaPagar
 
 class TransacaoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,3 +19,10 @@ class MetaSerializer(serializers.ModelSerializer):
         model = MetaFinanceira
         fields = '__all__'
         read_only_fields = ['usuario']
+
+
+class ContaPagarSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContaPagar
+        fields = '__all__'
+        read_only_fields = ['usuario', 'transacao_gerada']

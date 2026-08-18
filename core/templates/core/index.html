@@ -147,6 +147,10 @@
                     class="py-3 px-6 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 cursor-pointer whitespace-nowrap">
                     🎯 Planejamento Financeiro
                 </button>
+                <button id="btn-aba-contaspagar" onclick="alternarAba('contaspagar')"
+                    class="py-3 px-6 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 cursor-pointer whitespace-nowrap">
+                    📋 Contas a Pagar
+                </button>
             </div>
         </div>
 
@@ -400,16 +404,14 @@
                             <div class="flex justify-between items-start mb-2">
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <h4 class="font-semibold text-gray-800 text-base">{{ meta.titulo }}</h4>
-                                    {% if diag.status == 'Crítico' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-rose-100 text-rose-700" title="{{ diag.mensagem }}">Crítico</span>
-                                    {% elif diag.status == 'Excelente' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700" title="{{ diag.mensagem }}">Excelente</span>
-                                    {% elif diag.status == 'Próximo' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700" title="{{ diag.mensagem }}">Próximo</span>
-                                    {% elif diag.status == 'Longe' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-gray-200 text-gray-600" title="{{ diag.mensagem }}">Longe</span>
-                                    {% elif diag.status == 'Neutro' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-700" title="{{ diag.mensagem }}">Neutro</span>
+                                    {% if diag.status_label == 'Início da Meta 🚀' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-rose-100 text-rose-700" title="{{ diag.mensagem }}">Início da Meta 🚀</span>
+                                    {% elif diag.status_label == 'Em Andamento ⏳' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-gray-200 text-gray-600" title="{{ diag.mensagem }}">Em Andamento ⏳</span>
+                                    {% elif diag.status_label == 'Perto do Objetivo 🎯' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700" title="{{ diag.mensagem }}">Perto do Objetivo 🎯</span>
+                                    {% elif diag.status_label == 'Concluída 🎉' %}
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700" title="{{ diag.mensagem }}">Concluída 🎉</span>
                                     {% endif %}
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -461,6 +463,52 @@
                 </button>
             </div>
             {% endif %}
+        </div>
+
+
+        <!-- ==========================================
+             ABA 4: CONTAS A PAGAR
+             ========================================== -->
+        <div id="aba-contaspagar" class="aba-conteudo hidden space-y-6">
+            <!-- CARDS RESUMO -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500 mb-1">Total Pendente no Mês</p>
+                    <p id="totalPendenteContas" class="text-2xl font-bold text-rose-600">R$ 0,00</p>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500 mb-1">Vencidas / Vencendo Hoje</p>
+                    <p id="qtdVencidasContas" class="text-2xl font-bold text-amber-600">0</p>
+                </div>
+            </div>
+
+            <!-- BOTAO NOVA CONTA -->
+            <div class="flex justify-end">
+                <button onclick="abrirModalContaPagar()"
+                    class="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-5 py-2.5 rounded text-sm transition shadow-sm">
+                    + Nova Conta a Pagar
+                </button>
+            </div>
+
+            <!-- TABELA DE CONTAS -->
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-600 font-medium">
+                        <tr>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Descricao</th>
+                            <th class="px-4 py-3">Categoria</th>
+                            <th class="px-4 py-3">Vencimento</th>
+                            <th class="px-4 py-3 text-right">Valor</th>
+                            <th class="px-4 py-3 text-center">Recorrente</th>
+                            <th class="px-4 py-3 text-center">Acoes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaContasPagar" class="divide-y divide-gray-100">
+                        <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma conta encontrada.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
     </div>
@@ -699,6 +747,58 @@
         </div>
     </div>
 
+    <!-- MODAL NOVA / EDITAR CONTA A PAGAR -->
+    <div id="modalContaPagar" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="tituloModalContaPagar" class="text-lg font-bold text-gray-800">Nova Conta a Pagar</h3>
+                <button onclick="fecharModalContaPagar()" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <form id="formContaPagar" onsubmit="salvarContaPagar(event)" class="space-y-4">
+                <input type="hidden" id="contaPagarId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Descricao</label>
+                    <input type="text" id="contaPagarDescricao" required
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                        <input type="number" id="contaPagarValor" step="0.01" min="0.01" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+                        <input type="date" id="contaPagarVencimento" required
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <select id="contaPagarCategoria"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                        <option value="Alimentacao">Alimentacao</option>
+                        <option value="Moradia">Moradia</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Saude">Saude</option>
+                        <option value="Educacao">Educacao</option>
+                        <option value="Compras">Compras</option>
+                        <option value="Outros" selected>Outros</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="contaPagarRecorrente" class="rounded border-gray-300 text-teal-600 focus:ring-teal-600">
+                    <label for="contaPagarRecorrente" class="text-sm font-medium text-gray-700">Repetir mensalmente</label>
+                </div>
+                <button type="submit"
+                    class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                    Salvar
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- TOAST CONTAINER -->
     <div id="toast-container" class="fixed top-5 right-5 z-[70] flex flex-col gap-3 pointer-events-none"></div>
 
@@ -796,7 +896,7 @@
                 el.classList.remove('aba-animate');
             });
 
-            const botoes = ['dashboard', 'transacoes', 'planejamento'];
+            const botoes = ['dashboard', 'transacoes', 'planejamento', 'contaspagar'];
             botoes.forEach(aba => {
                 const btn = document.getElementById(`btn-aba-${aba}`);
                 if (btn) {
@@ -827,15 +927,22 @@
             if (nomeAba === 'dashboard') {
                 carregarGraficos();
             }
+            if (nomeAba === 'contaspagar') {
+                carregarContasPagar();
+            }
         }
 
         async function carregarGraficos() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
-                const mes = urlParams.get('mes') || '';
-                const ano = urlParams.get('ano') || '';
+                const params = new URLSearchParams();
+                const mes = urlParams.get('mes');
+                const ano = urlParams.get('ano');
+                if (mes) params.set('mes', mes);
+                if (ano) params.set('ano', ano);
 
-                const response = await fetch(`/api/graficos-dados/?mes=${mes}&ano=${ano}`);
+                const qs = params.toString();
+                const response = await fetch(`/api/graficos-dados/${qs ? '?' + qs : ''}`);
                 if (!response.ok) return;
 
                 const data = await response.json();
@@ -1212,6 +1319,201 @@
             }
         }
 
+        // ==========================================
+        // CONTAS A PAGAR
+        // ==========================================
+
+        function getCsrfTokenContas() {
+            const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+            if (cookie) return cookie.split('=')[1];
+            const input = document.querySelector('[name=csrfmiddlewaretoken]');
+            return input ? input.value : '';
+        }
+
+        async function carregarContasPagar() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const params = new URLSearchParams();
+                const mes = urlParams.get('mes');
+                const ano = urlParams.get('ano');
+                if (mes) params.set('mes', mes);
+                if (ano) params.set('ano', ano);
+
+                const qs = params.toString();
+                const response = await fetch(`/api/contas-pagar/${qs ? '?' + qs : ''}`);
+                if (!response.ok) return;
+
+                const contas = await response.json();
+                const tabela = document.getElementById('tabelaContasPagar');
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+
+                let totalPendente = 0;
+                let qtdVencidas = 0;
+
+                if (contas.length === 0) {
+                    tabela.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma conta encontrada.</td></tr>';
+                } else {
+                    tabela.innerHTML = contas.map(conta => {
+                        const vencimento = new Date(conta.data_vencimento + 'T00:00:00');
+                        let badge = '';
+                        if (conta.paga) {
+                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">Paga</span>';
+                        } else if (vencimento < hoje) {
+                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-rose-100 text-rose-700">Vencida</span>';
+                            totalPendente += parseFloat(conta.valor);
+                            qtdVencidas++;
+                        } else if (vencimento.getTime() === hoje.getTime()) {
+                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700">Vence Hoje</span>';
+                            totalPendente += parseFloat(conta.valor);
+                            qtdVencidas++;
+                        } else {
+                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-700">A Vencer</span>';
+                            totalPendente += parseFloat(conta.valor);
+                        }
+
+                        const vencimentoStr = vencimento.toLocaleDateString('pt-BR');
+                        const valorStr = parseFloat(conta.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                        const recorrente = conta.recorrente ? 'Sim' : '—';
+
+                        let acoes = '';
+                        if (!conta.paga) {
+                            acoes += `<button onclick="darBaixaConta('${conta.id}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Dar Baixa">✓ Pagar</button> `;
+                        }
+                        acoes += `<button onclick="abrirModalEditarContaPagar('${conta.id}', '${conta.descricao.replace(/'/g, "\\'")}', '${conta.valor}', '${conta.data_vencimento}', '${conta.categoria}', ${conta.recorrente})" class="text-gray-400 hover:text-teal-600 transition text-xs" title="Editar">Editar</button> `;
+                        acoes += `<button onclick="deletarContaPagar('${conta.id}')" class="text-gray-400 hover:text-rose-600 transition text-xs" title="Excluir">Excluir</button>`;
+
+                        return `<tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3">${badge}</td>
+                            <td class="px-4 py-3 font-medium text-gray-800">${conta.descricao}</td>
+                            <td class="px-4 py-3 text-gray-600">${conta.categoria}</td>
+                            <td class="px-4 py-3 text-gray-600">${vencimentoStr}</td>
+                            <td class="px-4 py-3 text-right font-medium text-gray-800">${valorStr}</td>
+                            <td class="px-4 py-3 text-center text-gray-600">${recorrente}</td>
+                            <td class="px-4 py-3 text-center space-x-2">${acoes}</td>
+                        </tr>`;
+                    }).join('');
+                }
+
+                document.getElementById('totalPendenteContas').textContent = totalPendente.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                document.getElementById('qtdVencidasContas').textContent = qtdVencidas;
+
+            } catch (error) {
+                console.error('Erro ao carregar contas a pagar:', error);
+            }
+        }
+
+        function abrirModalContaPagar() {
+            document.getElementById('contaPagarId').value = '';
+            document.getElementById('contaPagarDescricao').value = '';
+            document.getElementById('contaPagarValor').value = '';
+            document.getElementById('contaPagarVencimento').value = '';
+            document.getElementById('contaPagarCategoria').value = 'Outros';
+            document.getElementById('contaPagarRecorrente').checked = false;
+            document.getElementById('tituloModalContaPagar').textContent = 'Nova Conta a Pagar';
+            document.getElementById('modalContaPagar').classList.remove('hidden');
+        }
+
+        function fecharModalContaPagar() {
+            document.getElementById('modalContaPagar').classList.add('hidden');
+        }
+
+        function abrirModalEditarContaPagar(id, descricao, valor, vencimento, categoria, recorrente) {
+            document.getElementById('contaPagarId').value = id;
+            document.getElementById('contaPagarDescricao').value = descricao;
+            document.getElementById('contaPagarValor').value = valor;
+            document.getElementById('contaPagarVencimento').value = vencimento;
+            document.getElementById('contaPagarCategoria').value = categoria;
+            document.getElementById('contaPagarRecorrente').checked = recorrente;
+            document.getElementById('tituloModalContaPagar').textContent = 'Editar Conta a Pagar';
+            document.getElementById('modalContaPagar').classList.remove('hidden');
+        }
+
+        async function salvarContaPagar(event) {
+            event.preventDefault();
+            const id = document.getElementById('contaPagarId').value;
+            const payload = {
+                descricao: document.getElementById('contaPagarDescricao').value,
+                valor: parseFloat(document.getElementById('contaPagarValor').value),
+                data_vencimento: document.getElementById('contaPagarVencimento').value,
+                categoria: document.getElementById('contaPagarCategoria').value,
+                recorrente: document.getElementById('contaPagarRecorrente').checked,
+            };
+
+            const isEdicao = id !== '';
+            const url = isEdicao ? `/api/contas-pagar/${id}/` : '/api/contas-pagar/';
+            const method = isEdicao ? 'PATCH' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfTokenContas(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    fecharModalContaPagar();
+                    mostrarToast(isEdicao ? 'Conta atualizada com sucesso!' : 'Conta criada com sucesso!', 'sucesso');
+                    carregarContasPagar();
+                } else {
+                    const erro = await response.json();
+                    mostrarToast('Erro ao salvar conta: ' + JSON.stringify(erro), 'erro');
+                }
+            } catch (error) {
+                mostrarToast('Erro de conexao ao salvar conta.', 'erro');
+            }
+        }
+
+        async function darBaixaConta(id) {
+            try {
+                const response = await fetch(`/api/contas-pagar/${id}/dar_baixa/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfTokenContas(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (response.ok) {
+                    mostrarToast('Conta liquidada e lancada no saldo!', 'sucesso');
+                    carregarContasPagar();
+                } else {
+                    const erro = await response.json();
+                    mostrarToast(erro.erro || 'Erro ao dar baixa na conta.', 'erro');
+                }
+            } catch (error) {
+                mostrarToast('Erro de conexao ao dar baixa.', 'erro');
+            }
+        }
+
+        async function deletarContaPagar(id) {
+            const confirmado = await confirmarAcao('Tem certeza que deseja excluir esta conta a pagar?');
+            if (!confirmado) return;
+
+            try {
+                const response = await fetch(`/api/contas-pagar/${id}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCsrfTokenContas(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (response.ok) {
+                    mostrarToast('Conta excluida com sucesso!', 'sucesso');
+                    carregarContasPagar();
+                } else {
+                    mostrarToast('Erro ao excluir a conta.', 'erro');
+                }
+            } catch (error) {
+                mostrarToast('Erro de conexao ao excluir a conta.', 'erro');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const aba = urlParams.get('aba');
@@ -1219,6 +1521,9 @@
                 alternarAba(aba);
             } else {
                 carregarGraficos();
+            }
+            if (aba === 'contaspagar' || !aba) {
+                carregarContasPagar();
             }
         });
 

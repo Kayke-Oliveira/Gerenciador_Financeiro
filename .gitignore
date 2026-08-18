@@ -12,13 +12,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Configurações de IDEs
+# Configuracoes de IDEs
 .vscode/
 .idea/
 
-# Variáveis de ambiente / Segredos
+# Variaveis de ambiente / Segredos
 .env
 .env.local
+.env.production
 
 # Arquivos do sistema
 .DS_Store
@@ -27,11 +28,9 @@ Thumbs.db
 # Logs
 *.log
 
-# Arquivos estáticos coletados (collectstatic)
+# Arquivos estaticos coletados (collectstatic)
 staticfiles/
 
-# Documentacao auxiliar em Markdown (exceto README e docs do projeto)
+# Documentacao auxiliar em Markdown (exceto README)
 *.md
 !README.md
-!DOCUMENTACAO.md
-!MANUAL_ERROS_CORRECOES.md

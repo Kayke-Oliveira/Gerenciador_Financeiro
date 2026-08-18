@@ -18,8 +18,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Transacao, OrcamentoMensal, ArquivoImportado, MetaFinanceira
-from .serializers import TransacaoSerializer, OrcamentoSerializer, MetaSerializer
+from .models import Transacao, OrcamentoMensal, ArquivoImportado, MetaFinanceira, ContaPagar
+from .serializers import TransacaoSerializer, OrcamentoSerializer, MetaSerializer, ContaPagarSerializer
 from .services.dashboard_service import DashboardService
 from .services.extrato_service import ExtratoService, FormatoNaoSuportadoError
 from .services.planejamento_service import PlanejamentoService
@@ -87,6 +87,49 @@ class MetaViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)
+
+
+class ContaPagarViewSet(viewsets.ModelViewSet):
+    serializer_class = ContaPagarSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = ContaPagar.objects.filter(usuario=self.request.user)
+        mes = self.request.query_params.get('mes')
+        ano = self.request.query_params.get('ano')
+        if mes and ano:
+            qs = qs.filter(data_vencimento__month=mes, data_vencimento__year=ano)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        conta = self.get_object()
+        if conta.transacao_gerada:
+            conta.transacao_gerada.delete()
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'])
+    def dar_baixa(self, request, pk=None):
+        conta = self.get_object()
+        if conta.paga:
+            return Response({'erro': 'Conta ja foi paga.'}, status=400)
+
+        transacao = Transacao.objects.create(
+            usuario=request.user,
+            descricao=conta.descricao,
+            valor=conta.valor,
+            tipo='DESPESA',
+            data=conta.data_vencimento,
+            categoria=conta.categoria,
+        )
+
+        conta.paga = True
+        conta.transacao_gerada = transacao
+        conta.save()
+
+        return Response({'sucesso': True, 'mensagem': 'Conta liquidada e lancada no saldo.'})
 # ==========================================
 # VIEWS WEB (HTML)
 # ==========================================
@@ -120,10 +163,10 @@ def pagina_inicial(request):
     for meta in metas:
         try:
             diag = PlanejamentoService.calcular_diagnostico_meta(
-                meta.id, request.user, mes_selecionado, ano_selecionado
+                meta.id, request.user
             )
         except Exception:
-            diag = {'status': 'Sem dados', 'mensagem': 'Sem dados suficientes para diagnostico.'}
+            diag = {'status_label': 'Sem dados', 'mensagem': 'Sem dados suficientes para diagnostico.'}
         metas_com_diagnostico.append({'meta': meta, 'diagnostico': diag})
 
     contexto = {
@@ -139,7 +182,7 @@ def pagina_inicial(request):
             (5, 'Maio'), (6, 'Junho'), (7, 'Julho'), (8, 'Agosto'),
             (9, 'Setembro'), (10, 'Outubro'), (11, 'Novembro'), (12, 'Dezembro')
         ],
-        'anos': range(hoje.year - 2, hoje.year + 3),  # Gera de 2024 a 2028
+        'anos': range(hoje.year - 6, hoje.year + 3),  # Gera de 2020 a 2028
     }
 
     return render(request, 'core/index.html', contexto)
