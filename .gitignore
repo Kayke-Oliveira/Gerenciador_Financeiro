@@ -20,6 +20,7 @@ __pycache__/
 .env
 .env.local
 .env.production
+CREDENCIAIS_DEPLOY.md
 
 # Arquivos do sistema
 .DS_Store
