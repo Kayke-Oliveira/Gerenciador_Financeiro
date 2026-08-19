@@ -122,3 +122,27 @@ class ContaPagar(models.Model):
     def __str__(self):
         status = 'Paga' if self.paga else 'Pendente'
         return f'{self.descricao} - R$ {self.valor} ({status})'
+
+class ContaReceber(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contas_receber')
+    descricao = models.CharField(max_length=255)
+    valor = models.DecimalField(max_digits=15, decimal_places=2)
+    data_recebimento = models.DateField()
+    categoria = models.CharField(max_length=50, choices=Transacao.CATEGORIA_CHOICES, default='Outros')
+    recebida = models.BooleanField(default=False)
+    recorrente = models.BooleanField(default=False)
+    transacao_gerada = models.OneToOneField(
+        'Transacao',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='conta_origem_receber'
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['data_recebimento']
+
+    def __str__(self):
+        status = 'Recebida' if self.recebida else 'Pendente'
+        return f'{self.descricao} - R$ {self.valor} ({status})'

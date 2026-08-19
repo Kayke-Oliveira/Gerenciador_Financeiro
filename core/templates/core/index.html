@@ -6,25 +6,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Financeiro</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Transição suave entre abas */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(16px); }
             to   { opacity: 1; transform: translateY(0); }
         }
-        .aba-animate {
-            animation: fadeInUp 0.6s ease-out forwards;
-        }
+        .aba-animate { animation: fadeInUp 0.6s ease-out forwards; }
 
-        /* Toast notifications */
         @keyframes toastIn {
             from { opacity: 0; transform: translateX(80px); }
             to   { opacity: 1; transform: translateX(0); }
@@ -33,47 +25,473 @@
             from { opacity: 1; transform: translateX(0); }
             to   { opacity: 0; transform: translateX(80px); }
         }
-        .toast-enter {
-            animation: toastIn 0.4s ease-out forwards;
-        }
-        .toast-exit {
-            animation: toastOut 0.4s ease-in forwards;
-        }
+        .toast-enter { animation: toastIn 0.4s ease-out forwards; }
+        .toast-exit  { animation: toastOut 0.4s ease-in forwards; }
     </style>
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center py-10 px-4">
+<body class="min-h-screen bg-[#f4f7f6] flex font-sans text-slate-800">
 
-    <!-- Tag nativa do Django para disponibilizar o Cookie CSRF -->
     {% csrf_token %}
 
-    <!-- MODAL DE PRIMEIRA ETAPA: REGISTRAR SALÁRIO -->
-    <div id="modalSalario"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 {% if planejamento %}hidden{% endif %}">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 md:p-8 max-w-md w-full text-center">
-            <span class="text-3xl mb-2 block">💰</span>
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Qual é o seu salário mensal?</h2>
-            <p class="text-sm text-gray-500 mb-6">
-                Informe sua renda para calcularmos suas metas de reserva de emergência, renda passiva e limites de
-                gastos.
-            </p>
+    <!-- ==========================================
+         SIDEBAR LATERAL
+         ========================================== -->
+    <aside class="w-64 bg-[#064e3b] text-white flex flex-col justify-between p-5 rounded-r-3xl my-3 shadow-xl shrink-0">
+        <div>
+            <!-- Logo / Brand -->
+            <div class="flex items-center gap-3 px-2 py-4 mb-6 border-b border-emerald-800/60">
+                <div class="w-10 h-10 bg-emerald-500 text-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-md">
+                    <i data-lucide="circle-dollar-sign" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wide leading-tight">Controle</h1>
+                    <span class="text-xs text-emerald-300 font-medium">Financeiro</span>
+                </div>
+            </div>
 
+            <!-- Navegação -->
+            <nav class="space-y-2">
+                <button onclick="alternarAba('dashboard')" id="nav-dashboard"
+                    class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200 text-left bg-white text-[#064e3b] shadow-md">
+                    <span><i data-lucide="layout-dashboard" class="w-5 h-5"></i></span> Dashboard
+                </button>
+                <button onclick="alternarAba('lancamentos')" id="nav-lancamentos"
+                    class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-emerald-100 hover:bg-emerald-800/50 transition-all duration-200 text-left">
+                    <span><i data-lucide="receipt" class="w-5 h-5"></i></span> Lançamentos
+                </button>
+                <button onclick="alternarAba('planejamento')" id="nav-planejamento"
+                    class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-emerald-100 hover:bg-emerald-800/50 transition-all duration-200 text-left">
+                    <span><i data-lucide="target" class="w-5 h-5"></i></span> Planejamento
+                </button>
+                <button onclick="alternarAba('contas-pagar')" id="nav-contas-pagar"
+                    class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-emerald-100 hover:bg-emerald-800/50 transition-all duration-200 text-left">
+                    <span><i data-lucide="calendar-clock" class="w-5 h-5"></i></span> Contas a Pagar
+                </button>
+                <button onclick="alternarAba('contas-receber')" id="nav-contas-receber"
+                    class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-emerald-100 hover:bg-emerald-800/50 transition-all duration-200 text-left">
+                    <span><i data-lucide="banknote" class="w-5 h-5"></i></span> Contas a Receber
+                </button>
+            </nav>
+        </div>
+
+        <!-- Rodapé da Sidebar -->
+        <div class="border-t border-emerald-800/60 pt-4 space-y-2">
+            <button onclick="abrirModalSalario()"
+                class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-emerald-200 hover:text-white hover:bg-emerald-800/40 rounded-xl transition-all">
+                <i data-lucide="wallet" class="w-4 h-4"></i> Alterar Salário
+            </button>
+            <a href="{% url 'logout' %}"
+                class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 rounded-xl transition-all">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Sair
+            </a>
+        </div>
+    </aside>
+
+    <!-- ==========================================
+         ÁREA DE CONTEÚDO PRINCIPAL
+         ========================================== -->
+    <main class="flex-1 flex flex-col p-6 overflow-y-auto">
+
+        <!-- HEADER / TOPBAR -->
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+                <h2 id="titulo-pagina-ativa" class="text-2xl font-bold text-emerald-950">Dashboard</h2>
+                <p class="text-xs text-slate-500">Visão geral do seu patrimônio e fluxo de caixa</p>
+            </div>
+
+            <form id="formFiltroData" class="flex items-center gap-2 bg-white p-2 rounded-2xl shadow-sm border border-emerald-100">
+                <span class="text-xs font-semibold text-emerald-800 pl-2">                <i data-lucide="calendar" class="w-3 h-3"></i> Período:</span>
+                <select name="mes" id="selectMes" onchange="aplicarFiltroData()"
+                    class="text-xs border-none focus:ring-0 rounded-xl bg-emerald-50/50 text-emerald-900 font-semibold py-1.5 px-3">
+                    {% for num, nome in meses %}
+                    <option value="{{ num }}" {% if num == mes_selecionado %} selected {% endif %}>{{ nome }}</option>
+                    {% endfor %}
+                </select>
+                <select name="ano" id="selectAno" onchange="aplicarFiltroData()"
+                    class="text-xs border-none focus:ring-0 rounded-xl bg-emerald-50/50 text-emerald-900 font-semibold py-1.5 px-3">
+                    {% for ano in anos %}
+                    <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>{{ ano }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </header>
+
+        <!-- MÓDULOS / ABAS -->
+        <section class="flex-1">
+
+            <!-- ==========================================
+                 ABA 1: DASHBOARD & GRÁFICOS
+                 ========================================== -->
+            <div id="aba-dashboard" class="conteudo-aba space-y-6">
+                <!-- CARDS DE TOTALIZADORES -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-100/50 shadow-sm text-center">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50 mx-auto mb-2">
+                            <i data-lucide="trending-up" class="w-5 h-5 text-emerald-600"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Entradas</p>
+                        <p class="text-2xl font-bold text-slate-800 mt-1">R$ {{ totais.entradas|floatformat:2|default:"0.00" }}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-100/50 shadow-sm text-center">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-rose-50 mx-auto mb-2">
+                            <i data-lucide="trending-down" class="w-5 h-5 text-rose-600"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Saídas</p>
+                        <p class="text-2xl font-bold text-slate-800 mt-1">R$ {{ totais.saidas|floatformat:2|default:"0.00" }}</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-100/50 shadow-sm text-center">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-50 mx-auto mb-2">
+                            <i data-lucide="piggy-bank" class="w-5 h-5 text-emerald-800"></i>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Saldo</p>
+                        <p class="text-2xl font-bold text-slate-800 mt-1">R$ {{ totais.saldo|floatformat:2|default:"0.00" }}</p>
+                    </div>
+                </div>
+
+                <!-- GRÁFICOS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-100/50 shadow-sm">
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Resumo: Entradas vs. Saídas</h3>
+                        <div class="relative h-64 flex justify-center items-center">
+                            <canvas id="chartTipos"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-3xl border border-emerald-100/50 shadow-sm">
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Despesas por Categoria</h3>
+                        <div class="relative h-64">
+                            <canvas id="chartCategorias"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 ABA 2: LANÇAMENTOS E HISTÓRICO
+                 ========================================== -->
+            <div id="aba-lancamentos" class="conteudo-aba hidden space-y-6">
+                <!-- FORMULÁRIO INLINE -->
+                <div class="bg-white p-5 rounded-3xl border border-emerald-100/50 shadow-sm">
+                    <form id="formTransacao" class="flex flex-wrap lg:flex-nowrap items-end gap-4">
+                        <div class="w-full sm:w-48">
+                            <label for="categoria" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Categoria</label>
+                            <select name="categoria" id="categoria" required
+                                class="w-full border border-emerald-100/60 rounded-xl px-3 py-2 text-sm text-slate-800 bg-white focus:outline-none focus:border-emerald-600 transition-colors cursor-pointer">
+                                <option value="" disabled selected>Selecione...</option>
+                                <option value="Alimentação">Alimentação</option>
+                                <option value="Moradia">Moradia</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Lazer">Lazer</option>
+                                <option value="Saúde">Saúde</option>
+                                <option value="Educação">Educação</option>
+                                <option value="Compras">Compras</option>
+                                <option value="Salário">Salário</option>
+                                <option value="Investimentos">Investimentos</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="flex-1 min-w-[200px]">
+                            <label for="descricao" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Descrição</label>
+                            <input type="text" id="descricao" required placeholder="Ex: Aluguel, Supermercado..."
+                                class="w-full border border-emerald-100/60 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 transition-colors">
+                        </div>
+                        <div class="w-full sm:w-36">
+                            <label for="valor" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Valor (R$)</label>
+                            <input type="number" step="0.01" id="valor" required placeholder="0.00"
+                                class="w-full border border-emerald-100/60 rounded-xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600 transition-colors">
+                        </div>
+                        <div class="flex items-center gap-4 py-2 text-sm">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-slate-700 font-medium select-none">
+                                <input type="radio" name="tipo_radio" value="RECEITA" class="text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                                Entrada
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer text-slate-700 font-medium select-none">
+                                <input type="radio" name="tipo_radio" value="DESPESA" checked class="text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                                Saída
+                            </label>
+                        </div>
+                        <button type="submit"
+                            class="w-full lg:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-2 rounded-xl text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
+                            Adicionar
+                        </button>
+                        <button type="button" onclick="abrirModalImportacao()"
+                            class="w-full lg:w-auto bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-6 py-2 rounded-xl text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
+                            Importar Extrato
+                        </button>
+                    </form>
+                </div>
+
+                <!-- TABELA DE TRANSAÇÕES -->
+                <div class="bg-white rounded-3xl border border-emerald-100/50 shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-3 border-b border-slate-100">
+                        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Histórico de Lançamentos</h3>
+                        <button onclick="deletarTodasTransacoes()"
+                            class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-2 rounded-xl transition shadow-sm">
+                            <i data-lucide="trash-2" class="w-3 h-3 inline"></i> Excluir Todas
+                        </button>
+                    </div>
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="py-3 px-6">Descrição</th>
+                                <th class="py-3 px-6">Valor</th>
+                                <th class="py-3 px-6 text-center">Tipo</th>
+                                <th class="py-3 px-6 text-right">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for t in transacoes %}
+                            <tr class="hover:bg-slate-50/50 transition">
+                                <td class="py-3 px-6 text-slate-800 font-medium">
+                                    {{ t.categoria }}
+                                    {% if t.descricao %}
+                                    <span class="block text-xs text-slate-400 font-normal">{{ t.descricao }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-6 font-semibold text-slate-800">R$ {{ t.valor }}</td>
+                                <td class="py-3 px-6 text-center">
+                                    {% if t.tipo == 'RECEITA' %}
+                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100"><i data-lucide="trending-up" class="w-3 h-3 text-emerald-600"></i></span>
+                                    {% else %}
+                                    <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100"><i data-lucide="trending-down" class="w-3 h-3 text-rose-600"></i></span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-3 px-6 text-right flex items-center justify-end gap-2">
+                                    <button onclick="abrirModalEdicao('{{ t.id }}', '{{ t.descricao }}', '{{ t.valor }}', '{{ t.tipo }}')"
+                                        class="text-slate-400 hover:text-emerald-600 transition" title="Editar"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                    <button onclick="deletarTransacao('{{ t.id }}')"
+                                        class="text-slate-400 hover:text-rose-600 transition" title="Excluir"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="py-8 text-center text-slate-400 italic">
+                                    Nenhum registro encontrado. Adicione uma movimentação acima!
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 ABA 3: PLANEJAMENTO FINANCEIRO
+                 ========================================== -->
+            <div id="aba-planejamento" class="conteudo-aba hidden space-y-6">
+                {% if planejamento %}
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/50 shadow-sm">
+                    <h3 class="text-xs font-bold text-emerald-700 uppercase tracking-wider mb-4">
+                        Planejamento Recomendado (Salário Base: R$ {{planejamento.salario}})
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-xs">
+                        <div class="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/60">
+                            <span class="text-slate-500 block mb-1">Renda Passiva (200x)</span>
+                            <strong class="text-slate-800 text-sm">R$ {{planejamento.meta_renda_passiva|floatformat:2}}</strong>
+                        </div>
+                        <div class="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/60">
+                            <span class="text-slate-500 block mb-1">Reserva (6x)</span>
+                            <strong class="text-slate-800 text-sm">R$ {{planejamento.reserva_emergencia|floatformat:2}}</strong>
+                        </div>
+                        <div class="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/60">
+                            <span class="text-emerald-600 block mb-1">Investimento (10%)</span>
+                            <strong class="text-slate-800 text-sm">R$ {{planejamento.investimento_mensal|floatformat:2}}</strong>
+                        </div>
+                        <div class="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/60">
+                            <span class="text-sky-600 block mb-1">Contas Fixas (60%)</span>
+                            <strong class="text-slate-800 text-sm">R$ {{planejamento.contas_fixas|floatformat:2}}</strong>
+                        </div>
+                        <div class="bg-emerald-50/50 p-3 rounded-2xl border border-emerald-100/60">
+                            <span class="text-purple-600 block mb-1">Lazer (30%)</span>
+                            <strong class="text-slate-800 text-sm">R$ {{planejamento.lazer|floatformat:2}}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-3xl border border-emerald-100/50 shadow-sm space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wide"><i data-lucide="target" class="w-4 h-4 inline"></i> Suas Metas e Objetivos</h3>
+                        <button onclick="abrirModalMeta()"
+                            class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-4 py-2 rounded-2xl transition shadow-sm">
+                            + Nova Meta
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for item in metas_com_diagnostico %}
+                        {% with meta=item.meta diag=item.diagnostico %}
+                        <div class="border border-emerald-100/60 rounded-3xl p-4 bg-emerald-50/30 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <h4 class="font-semibold text-slate-800 text-base">{{ meta.titulo }}</h4>
+                                        {% if diag.status_label == 'Início da Meta 🚀' %}
+                                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-700" title="{{ diag.mensagem }}">Início da Meta 🚀</span>
+                                        {% elif diag.status_label == 'Em Andamento ⏳' %}
+                                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-200 text-slate-600" title="{{ diag.mensagem }}">Em Andamento ⏳</span>
+                                        {% elif diag.status_label == 'Perto do Objetivo 🎯' %}
+                                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700" title="{{ diag.mensagem }}">Perto do Objetivo 🎯</span>
+                                        {% elif diag.status_label == 'Concluída 🎉' %}
+                                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700" title="{{ diag.mensagem }}">Concluída 🎉</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-full">
+                                            Alvo: R$ {{ meta.valor_objetivo|floatformat:2 }}
+                                        </span>
+                                        <button onclick="abrirModalEditarMeta('{{ meta.id }}', '{{ meta.titulo }}', '{{ meta.valor_objetivo }}', '{{ meta.valor_atual }}', '{{ meta.prazo_meses }}')"
+                                            class="text-slate-400 hover:text-emerald-600 transition" title="Editar Meta"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                                        <button onclick="deletarMeta('{{ meta.id }}')"
+                                            class="text-slate-400 hover:text-rose-600 transition" title="Excluir Meta"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-3">
+                                    Prazo: {{ meta.prazo_meses }} meses | Aporte sugerido: <strong>R$ {{ meta.aporte_mensal_desejado|floatformat:2 }}/mês</strong>
+                                </p>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs text-slate-600 mb-1">
+                                    <span>Acumulado: R$ {{ meta.valor_atual|floatformat:2 }}</span>
+                                    <span>{{ meta.progresso_percentual|floatformat:0 }}%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-2">
+                                    <div class="bg-emerald-600 h-2 rounded-full" style="width: {{meta.progresso_percentual}}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endwith %}
+                        {% empty %}
+                        <div class="col-span-2 py-6 text-center text-slate-400 italic">
+                            Nenhuma meta cadastrada ainda. Clique em "+ Nova Meta" acima para começar!
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% else %}
+                <div class="bg-white p-8 rounded-3xl border border-emerald-100/50 shadow-sm text-center">
+                    <p class="text-slate-500 mb-4">Você ainda não configurou seu salário mensal para ver as recomendações.</p>
+                    <button onclick="abrirModalSalario()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-2xl text-sm transition shadow-sm">
+                        Configurar Salário Agora
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ==========================================
+                 ABA 4: CONTAS A PAGAR
+                 ========================================== -->
+            <div id="aba-contas-pagar" class="conteudo-aba hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white border border-emerald-100/50 rounded-3xl p-5 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total Pendente no Mês</p>
+                        <p id="totalPendenteContas" class="text-2xl font-bold text-rose-600">R$ 0,00</p>
+                    </div>
+                    <div class="bg-white border border-emerald-100/50 rounded-3xl p-5 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Vencidas / Vencendo Hoje</p>
+                        <p id="qtdVencidasContas" class="text-2xl font-bold text-amber-600">0</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="abrirModalContaPagar()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-2xl text-sm transition shadow-sm">
+                        + Nova Conta a Pagar
+                    </button>
+                </div>
+
+                <div class="bg-white border border-emerald-100/50 rounded-3xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Descricao</th>
+                                <th class="px-4 py-3">Categoria</th>
+                                <th class="px-4 py-3">Vencimento</th>
+                                <th class="px-4 py-3 text-right">Valor</th>
+                                <th class="px-4 py-3 text-center">Recorrente</th>
+                                <th class="px-4 py-3 text-center">Acoes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaContasPagar" class="divide-y divide-slate-100">
+                            <tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Nenhuma conta encontrada.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==========================================
+                 ABA 5: CONTAS A RECEBER
+                 ========================================== -->
+            <div id="aba-contas-receber" class="conteudo-aba hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white border border-emerald-100/50 rounded-3xl p-5 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Total a Receber no Mês</p>
+                        <p id="totalPendenteReceber" class="text-2xl font-bold text-emerald-600">R$ 0,00</p>
+                    </div>
+                    <div class="bg-white border border-emerald-100/50 rounded-3xl p-5 shadow-sm">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Atrasadas / Vencendo Hoje</p>
+                        <p id="qtdAtrasadasReceber" class="text-2xl font-bold text-amber-600">0</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="abrirModalContaReceber()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-2xl text-sm transition shadow-sm">
+                        + Nova Conta a Receber
+                    </button>
+                </div>
+
+                <div class="bg-white border border-emerald-100/50 rounded-3xl shadow-sm overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Descricao</th>
+                                <th class="px-4 py-3">Categoria</th>
+                                <th class="px-4 py-3">Recebimento</th>
+                                <th class="px-4 py-3 text-right">Valor</th>
+                                <th class="px-4 py-3 text-center">Recorrente</th>
+                                <th class="px-4 py-3 text-center">Acoes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaContasReceber" class="divide-y divide-slate-100">
+                            <tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Nenhuma conta encontrada.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- ==========================================
+         MODAIS
+         ========================================== -->
+
+    <!-- MODAL SALÁRIO -->
+    <div id="modalSalario" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 {% if planejamento %}hidden{% endif %}">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 md:p-8 max-w-md w-full text-center">
+            <i data-lucide="wallet" class="w-8 h-8 text-emerald-600 mb-2 block mx-auto"></i>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Qual é o seu salário mensal?</h2>
+            <p class="text-sm text-slate-500 mb-6">
+                Informe sua renda para calcularmos suas metas de reserva de emergência, renda passiva e limites de gastos.
+            </p>
             <form id="formSalario" class="space-y-4">
                 <div>
                     <input type="number" step="0.01" id="inputSalario" placeholder="R$ 3500,00" required
-                        class="w-full text-center text-xl font-semibold border-2 border-gray-300 rounded-lg px-4 py-3 text-gray-800 focus:outline-none focus:border-teal-600 transition">
+                        class="w-full text-center text-xl font-semibold border-2 border-emerald-100/60 rounded-2xl px-4 py-3 text-slate-800 focus:outline-none focus:border-emerald-600 transition">
                 </div>
-
                 <div class="flex flex-col gap-2 pt-2">
                     <button type="submit"
-                        class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 rounded-lg text-sm transition shadow-md">
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-2xl text-sm transition shadow-md">
                         Salvar e Continuar
                     </button>
-
                     <button type="button" onclick="fecharModalSalario()"
-                        class="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2.5 rounded-lg text-sm transition">
+                        class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 rounded-2xl text-sm transition">
                         Pular esta etapa por enquanto
                     </button>
                 </div>
@@ -81,479 +499,41 @@
         </div>
     </div>
 
-
-    <!-- CONTAINER PRINCIPAL -->
-    <div class="max-w-4xl w-full space-y-6">
-
-        <!-- CABEÇALHO -->
-        <header
-            class="bg-teal-700 text-white text-center py-6 rounded-t-xl shadow-md flex justify-between items-center px-8">
-            <h1 class="text-2xl font-bold tracking-wide">Controle Financeiro</h1>
-            <div class="flex items-center gap-2">
-                <button onclick="abrirModalSalario()"
-                    class="text-xs bg-teal-800 hover:bg-teal-900 px-3 py-1.5 rounded text-teal-100 transition">
-                    ⚙️ Alterar Salário
-                </button>
-                <a href="{% url 'logout' %}"
-                    class="text-xs bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded text-white font-medium transition">
-                    Sair
-                </a>
-            </div>
-        </header>
-
-        <!-- BARRA DE FILTRO DE MÊS E ANO -->
-        <div
-            class="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-2">
-                <span class="text-lg">📅</span>
-                <h2 class="text-sm font-semibold text-gray-700">Período de Visualização</h2>
-            </div>
-
-            <form id="formFiltroData" method="GET" class="flex items-center gap-3">
-                <!-- Seleção do Mês -->
-                <select name="mes" id="selectMes" onchange="aplicarFiltroData()"
-                    class="border border-gray-300 rounded px-3 py-1.5 text-sm font-medium text-gray-700 bg-white focus:outline-none focus:border-teal-600 transition">
-                    {% for num, nome in meses %}
-                    <option value="{{ num }}" {% if num == mes_selecionado %} selected {% endif %}>
-                        {{ nome }}
-                    </option>
-                    {% endfor %}
-                </select>
-
-                <!-- Seleção do Ano -->
-                <select name="ano" id="selectAno" onchange="aplicarFiltroData()"
-                    class="border border-gray-300 rounded px-3 py-1.5 text-sm font-medium text-gray-700 bg-white focus:outline-none focus:border-teal-600 transition">
-                    {% for ano in anos %}
-                    <option value="{{ ano }}" {% if ano == ano_selecionado %}selected{% endif %}>
-                        {{ ano }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </form>
-        </div>
-
-        <!-- MENU DE NAVEGAÇÃO POR ABAS -->
-        <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
-            <div class="flex border-b border-gray-200 overflow-x-auto">
-                <button id="btn-aba-dashboard" onclick="alternarAba('dashboard')"
-                    class="py-3 px-6 border-b-2 font-semibold text-sm transition-colors border-teal-600 text-teal-700 cursor-pointer whitespace-nowrap">
-                    📊 Dashboard & Gráficos
-                </button>
-                <button id="btn-aba-transacoes" onclick="alternarAba('transacoes')"
-                    class="py-3 px-6 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 cursor-pointer whitespace-nowrap">
-                    💳 Lançamentos & Histórico
-                </button>
-                <button id="btn-aba-planejamento" onclick="alternarAba('planejamento')"
-                    class="py-3 px-6 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 cursor-pointer whitespace-nowrap">
-                    🎯 Planejamento Financeiro
-                </button>
-                <button id="btn-aba-contaspagar" onclick="alternarAba('contaspagar')"
-                    class="py-3 px-6 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 cursor-pointer whitespace-nowrap">
-                    📋 Contas a Pagar
-                </button>
-            </div>
-        </div>
-
-
-        <!-- ==========================================
-             ABA 1: DASHBOARD & GRÁFICOS
-             ========================================== -->
-        <div id="aba-dashboard" class="aba-conteudo space-y-6">
-            <!-- CARDS DE TOTALIZADORES -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
-                    <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
-                        <span>Entradas</span>
-                        <span class="text-emerald-600 font-bold">⬆</span>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.entradas|floatformat:2|default:"0.00" }}
-                    </p>
-                </div>
-
-                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
-                    <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
-                        <span>Saídas</span>
-                        <span class="text-rose-600 font-bold">⬇</span>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saidas|floatformat:2|default:"0.00"}}
-                    </p>
-                </div>
-
-                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm text-center">
-                    <div class="flex items-center justify-center gap-2 text-gray-500 text-sm font-medium">
-                        <span>Total Saldo</span>
-                        <span class="font-bold text-teal-600">$</span>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-900 mt-2">R$ {{ totais.saldo|floatformat:2|default:"0.00"}}
-                    </p>
-                </div>
-            </div>
-
-            <!-- ÁREA DOS GRÁFICOS CHART.JS -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Gráfico 1: Entradas vs Saídas -->
-                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                    <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">
-                        Resumo: Entradas vs. Saídas
-                    </h3>
-                    <div class="relative h-64 flex justify-center items-center">
-                        <canvas id="chartTipos"></canvas>
-                    </div>
-                </div>
-
-                <!-- Gráfico 2: Despesas por Categoria -->
-                <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                    <h3 class="text-xs font-bold text-gray-600 uppercase tracking-wider mb-4">
-                        Despesas por Categoria
-                    </h3>
-                    <div class="relative h-64">
-                        <canvas id="chartCategorias"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-        <!-- ==========================================
-             ABA 2: LANÇAMENTOS E HISTÓRICO
-             ========================================== -->
-        <div id="aba-transacoes" class="aba-conteudo hidden space-y-6">
-            <!-- FORMULÁRIO INLINE DE NOVO GASTO/ENTRADA -->
-            <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                <form id="formTransacao" class="flex flex-wrap lg:flex-nowrap items-end gap-4">
-
-                    <!-- Categoria -->
-                    <div class="w-full sm:w-48">
-                        <label for="categoria" class="block text-xs font-semibold text-gray-600 mb-1">Categoria</label>
-                        <select name="categoria" id="categoria" required
-                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:border-teal-600 transition-colors cursor-pointer">
-                            <option value="" disabled selected>Selecione...</option>
-                            <option value="Alimentação">Alimentação</option>
-                            <option value="Moradia">Moradia</option>
-                            <option value="Transporte">Transporte</option>
-                            <option value="Lazer">Lazer</option>
-                            <option value="Saúde">Saúde</option>
-                            <option value="Educação">Educação</option>
-                            <option value="Compras">Compras</option>
-                            <option value="Salário">Salário</option>
-                            <option value="Investimentos">Investimentos</option>
-                            <option value="Outros">Outros</option>
-                        </select>
-                    </div>
-
-                    <!-- Descrição -->
-                    <div class="flex-1 min-w-[200px]">
-                        <label for="descricao" class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
-                        <input type="text" id="descricao" required placeholder="Ex: Aluguel, Supermercado..."
-                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600 transition-colors">
-                    </div>
-
-                    <!-- Valor -->
-                    <div class="w-full sm:w-36">
-                        <label for="valor" class="block text-xs font-semibold text-gray-600 mb-1">Valor
-                            (R$)</label>
-                        <input type="number" step="0.01" id="valor" required placeholder="0.00"
-                            class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600 transition-colors">
-                    </div>
-
-                    <!-- Tipo (Entrada / Saída) -->
-                    <div class="flex items-center gap-4 py-2 text-sm">
-                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700 font-medium select-none">
-                            <input type="radio" name="tipo_radio" value="RECEITA"
-                                class="text-teal-600 focus:ring-teal-500 cursor-pointer">
-                            Entrada
-                        </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer text-gray-700 font-medium select-none">
-                            <input type="radio" name="tipo_radio" value="DESPESA" checked
-                                class="text-teal-600 focus:ring-teal-500 cursor-pointer">
-                            Saída
-                        </label>
-                    </div>
-
-                    <!-- Botão Adicionar -->
-                    <button type="submit"
-                        class="w-full lg:w-auto bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
-                        Adicionar
-                    </button>
-
-                    <button type="button" onclick="abrirModalImportacao()" class="w-full lg:w-auto bg-teal-700 hover:bg-teal-800 text-white font-semibold px-6 py-2 rounded text-sm transition-all shadow-sm uppercase tracking-wider cursor-pointer active:scale-95">
-                        Importar Extrato
-                    </button>
-                </form>
-            </div>
-
-            <!-- TABELA DE TRANSAÇÕES -->
-            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-                <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200">
-                    <h3 class="text-sm font-semibold text-gray-700">Histórico de Lançamentos</h3>
-                    <button onclick="deletarTodasTransacoes()"
-                        class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold px-3 py-2 rounded transition shadow-sm">
-                        🗑️ Excluir Todas
-                    </button>
-                </div>
-                <table class="w-full text-left border-collapse text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-200 bg-gray-50 text-gray-600 font-semibold">
-                            <th class="py-3 px-6">Descrição</th>
-                            <th class="py-3 px-6">Valor</th>
-                            <th class="py-3 px-6 text-center">Tipo</th>
-                            <th class="py-3 px-6 text-right">Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        {% for t in transacoes %}
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="py-3 px-6 text-gray-800 font-medium">
-                                {{ t.categoria }}
-                                {% if t.descricao %}
-                                <span class="block text-xs text-gray-400 font-normal">{{ t.descricao }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 px-6 font-semibold text-gray-900">R$ {{ t.valor }}</td>
-                            <td class="py-3 px-6 text-center">
-                                {% if t.tipo == 'RECEITA' %}
-                                <span
-                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 text-xs font-bold">⬆</span>
-                                {% else %}
-                                <span
-                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-rose-100 text-rose-600 text-xs font-bold">⬇</span>
-                                {% endif %}
-                            </td>
-                            <td class="py-3 px-6 text-right flex items-center justify-end gap-2">
-                                <button
-                                    onclick="abrirModalEdicao('{{ t.id }}', '{{ t.descricao }}', '{{ t.valor }}', '{{ t.tipo }}')"
-                                    class="text-gray-400 hover:text-teal-600 transition" title="Editar">
-                                    ✏️
-                                </button>
-                                <button onclick="deletarTransacao('{{ t.id }}')"
-                                    class="text-gray-400 hover:text-rose-600 transition" title="Excluir">
-                                    🗑️
-                                </button>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="py-8 text-center text-gray-400 italic">
-                                Nenhum registro encontrado. Adicione uma movimentação acima!
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-
-        <!-- ==========================================
-             ABA 3: PLANEJAMENTO FINANCEIRO
-             ========================================== -->
-        <div id="aba-planejamento" class="aba-conteudo hidden space-y-6">
-            {% if planejamento %}
-            <!-- CARDS DE RECOMENDAÇÃO BASEADOS NO SALÁRIO -->
-            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-                <h3 class="text-xs font-bold text-teal-700 uppercase tracking-wider mb-4">
-                    Planejamento Recomendado (Salário Base: R$ {{planejamento.salario}})
-                </h3>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-center text-xs">
-                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                        <span class="text-gray-500 block mb-1">Renda Passiva (200x)</span>
-                        <strong class="text-gray-800 text-sm">R$
-                            {{planejamento.meta_renda_passiva|floatformat:2}}</strong>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                        <span class="text-gray-500 block mb-1">Reserva (6x)</span>
-                        <strong class="text-gray-800 text-sm">R$
-                            {{planejamento.reserva_emergencia|floatformat:2}}</strong>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                        <span class="text-emerald-600 block mb-1">Investimento (10%)</span>
-                        <strong class="text-gray-800 text-sm">R$
-                            {{planejamento.investimento_mensal|floatformat:2}}</strong>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                        <span class="text-sky-600 block mb-1">Contas Fixas (60%)</span>
-                        <strong class="text-gray-800 text-sm">R$
-                            {{planejamento.contas_fixas|floatformat:2}}</strong>
-                    </div>
-                    <div class="bg-gray-50 p-3 rounded border border-gray-200">
-                        <span class="text-purple-600 block mb-1">Lazer (30%)</span>
-                        <strong class="text-gray-800 text-sm">R$
-                            {{planejamento.lazer|floatformat:2}}</strong>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SEÇÃO DE METAS FINANCEIRAS PERSONALIZADAS -->
-            <div class="bg-white p-6 rounded-lg border border-gray-200 shadow-sm space-y-4">
-                <div class="flex items-center justify-between border-b border-gray-200 pb-3">
-                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wide">
-                        🎯 Suas Metas e Objetivos
-                    </h3>
-                    <button onclick="abrirModalMeta()"
-                        class="bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs px-4 py-2 rounded transition shadow-sm">
-                        + Nova Meta
-                    </button>
-                </div>
-
-                <!-- LISTA DE METAS CADASTRADAS -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {% for item in metas_com_diagnostico %}
-                    {% with meta=item.meta diag=item.diagnostico %}
-                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 flex flex-col justify-between">
-                        <div>
-                            <div class="flex justify-between items-start mb-2">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    <h4 class="font-semibold text-gray-800 text-base">{{ meta.titulo }}</h4>
-                                    {% if diag.status_label == 'Início da Meta 🚀' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-rose-100 text-rose-700" title="{{ diag.mensagem }}">Início da Meta 🚀</span>
-                                    {% elif diag.status_label == 'Em Andamento ⏳' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-gray-200 text-gray-600" title="{{ diag.mensagem }}">Em Andamento ⏳</span>
-                                    {% elif diag.status_label == 'Perto do Objetivo 🎯' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700" title="{{ diag.mensagem }}">Perto do Objetivo 🎯</span>
-                                    {% elif diag.status_label == 'Concluída 🎉' %}
-                                        <span class="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700" title="{{ diag.mensagem }}">Concluída 🎉</span>
-                                    {% endif %}
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-xs bg-teal-100 text-teal-800 font-medium px-2 py-0.5 rounded">
-                                        Alvo: R$ {{ meta.valor_objetivo|floatformat:2 }}
-                                    </span>
-                                    <button onclick="abrirModalEditarMeta('{{ meta.id }}', '{{ meta.titulo }}', '{{ meta.valor_objetivo }}', '{{ meta.valor_atual }}', '{{ meta.prazo_meses }}')"
-                                        class="text-gray-400 hover:text-teal-600 transition" title="Editar Meta">
-                                        ✏️
-                                    </button>
-                                    <button onclick="deletarMeta('{{ meta.id }}')"
-                                        class="text-gray-400 hover:text-rose-600 transition" title="Excluir Meta">
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-                            <p class="text-xs text-gray-500 mb-3">
-                                Prazo: {{ meta.prazo_meses }} meses | Aporte sugerido: <strong>R$ {{ meta.aporte_mensal_desejado|floatformat:2 }}/mês</strong>
-                            </p>
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between text-xs text-gray-600 mb-1">
-                                <span>Acumulado: R$ {{ meta.valor_atual|floatformat:2 }}</span>
-                                <span>{{ meta.progresso_percentual|floatformat:0 }}%</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-teal-600 h-2 rounded-full" style="width: {{meta.progresso_percentual}}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endwith %}
-                    {% empty %}
-                    <div class="col-span-2 py-6 text-center text-gray-400 italic">
-                        Nenhuma meta cadastrada ainda. Clique em "+ Nova Meta" acima para começar a planejar seus objetivos!
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            {% else %}
-            <div class="bg-white p-8 rounded-lg border border-gray-200 shadow-sm text-center">
-                <p class="text-gray-500 mb-4">Você ainda não configurou seu salário mensal para ver as
-                    recomendações.
-                </p>
-                <button onclick="abrirModalSalario()"
-                    class="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-5 py-2.5 rounded text-sm transition shadow-sm">
-                    Configurar Salário Agora
-                </button>
-            </div>
-            {% endif %}
-        </div>
-
-
-        <!-- ==========================================
-             ABA 4: CONTAS A PAGAR
-             ========================================== -->
-        <div id="aba-contaspagar" class="aba-conteudo hidden space-y-6">
-            <!-- CARDS RESUMO -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-                    <p class="text-sm font-medium text-gray-500 mb-1">Total Pendente no Mês</p>
-                    <p id="totalPendenteContas" class="text-2xl font-bold text-rose-600">R$ 0,00</p>
-                </div>
-                <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-                    <p class="text-sm font-medium text-gray-500 mb-1">Vencidas / Vencendo Hoje</p>
-                    <p id="qtdVencidasContas" class="text-2xl font-bold text-amber-600">0</p>
-                </div>
-            </div>
-
-            <!-- BOTAO NOVA CONTA -->
-            <div class="flex justify-end">
-                <button onclick="abrirModalContaPagar()"
-                    class="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-5 py-2.5 rounded text-sm transition shadow-sm">
-                    + Nova Conta a Pagar
-                </button>
-            </div>
-
-            <!-- TABELA DE CONTAS -->
-            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-50 text-gray-600 font-medium">
-                        <tr>
-                            <th class="px-4 py-3">Status</th>
-                            <th class="px-4 py-3">Descricao</th>
-                            <th class="px-4 py-3">Categoria</th>
-                            <th class="px-4 py-3">Vencimento</th>
-                            <th class="px-4 py-3 text-right">Valor</th>
-                            <th class="px-4 py-3 text-center">Recorrente</th>
-                            <th class="px-4 py-3 text-center">Acoes</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaContasPagar" class="divide-y divide-gray-100">
-                        <tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma conta encontrada.</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    </div>
-
-
-    <!-- MODAL DE CADASTRAR META -->
+    <!-- MODAL CRIAR META -->
     <div id="modalMeta" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-800">Nova Meta Financeira</h3>
-                <button onclick="fecharModalMeta()" class="text-gray-400 hover:text-gray-600">✕</button>
+                <h3 class="text-lg font-bold text-slate-800">Nova Meta Financeira</h3>
+                <button onclick="fecharModalMeta()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-
             <form id="formMeta" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Título da Meta</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Título da Meta</label>
                     <input type="text" id="metaTitulo" required placeholder="Ex: Viagem de Férias, Troca de Carro..."
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Alvo (R$)</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Valor Alvo (R$)</label>
                     <input type="number" step="0.01" id="metaValorAlvo" required placeholder="10000.00"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Já Acumulado (R$)</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Valor Já Acumulado (R$)</label>
                     <input type="number" step="0.01" id="metaValorAtual" value="0.00"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Prazo para Alcançar (Meses)</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Prazo para Alcançar (Meses)</label>
                     <input type="number" id="metaPrazoMeses" min="1" required placeholder="12"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div class="flex gap-2 pt-2">
                     <button type="submit"
-                        class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition shadow-sm">
                         Cadastrar Meta
                     </button>
                     <button type="button" onclick="fecharModalMeta()"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-2xl text-sm transition">
                         Cancelar
                     </button>
                 </div>
@@ -561,48 +541,42 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDITAR META -->
+    <!-- MODAL EDITAR META -->
     <div id="modalEditarMeta" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-800">Editar Meta</h3>
-                <button onclick="fecharModalEditarMeta()" class="text-gray-400 hover:text-gray-600">✕</button>
+                <h3 class="text-lg font-bold text-slate-800">Editar Meta</h3>
+                <button onclick="fecharModalEditarMeta()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-
             <form id="formEditarMeta" class="space-y-4">
                 <input type="hidden" id="editMetaId">
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Título da Meta</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Título da Meta</label>
                     <input type="text" id="editMetaTitulo" required
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Alvo (R$)</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Valor Alvo (R$)</label>
                     <input type="number" step="0.01" id="editMetaValorObjetivo" required
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Já Acumulado (R$)</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Valor Já Acumulado (R$)</label>
                     <input type="number" step="0.01" id="editMetaValorAtual"
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Prazo para Alcançar (Meses)</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Prazo para Alcançar (Meses)</label>
                     <input type="number" id="editMetaPrazoMeses" min="1" required
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div class="flex gap-2 pt-2">
                     <button type="submit"
-                        class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-sm">
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition shadow-sm">
                         Salvar Alterações
                     </button>
                     <button type="button" onclick="fecharModalEditarMeta()"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-2xl text-sm transition">
                         Cancelar
                     </button>
                 </div>
@@ -610,48 +584,42 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO DE TRANSAÇÃO -->
-    <div id="modalEditar"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+    <!-- MODAL EDITAR TRANSAÇÃO -->
+    <div id="modalEditar" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-800">Editar Transação</h3>
-                <button onclick="fecharModalEdicao()" class="text-gray-400 hover:text-gray-600">✕</button>
+                <h3 class="text-lg font-bold text-slate-800">Editar Transação</h3>
+                <button onclick="fecharModalEdicao()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-
             <form id="formEditarTransacao" class="space-y-4">
                 <input type="hidden" id="editId">
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Descrição</label>
                     <input type="text" id="editDescricao" required
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Valor</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Valor</label>
                     <input type="number" step="0.01" id="editValor" required
-                        class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-emerald-600">
                 </div>
-
                 <div class="flex items-center gap-4 text-sm">
-                    <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
-                        <input type="radio" name="editTipo" value="RECEITA" id="editTipoReceita" class="text-teal-600">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                        <input type="radio" name="editTipo" value="RECEITA" id="editTipoReceita" class="text-emerald-600">
                         Entrada
                     </label>
-                    <label class="flex items-center gap-1.5 cursor-pointer text-gray-700">
-                        <input type="radio" name="editTipo" value="DESPESA" id="editTipoDespesa" class="text-teal-600">
+                    <label class="flex items-center gap-1.5 cursor-pointer text-slate-700">
+                        <input type="radio" name="editTipo" value="DESPESA" id="editTipoDespesa" class="text-emerald-600">
                         Saída
                     </label>
                 </div>
-
                 <div class="flex gap-2 pt-2">
                     <button type="submit"
-                        class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition">
                         Salvar Alterações
                     </button>
                     <button type="button" onclick="fecharModalEdicao()"
-                        class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-2xl text-sm transition">
                         Cancelar
                     </button>
                 </div>
@@ -659,31 +627,28 @@
         </div>
     </div>
 
-    <!-- MODAL DE IMPORTAÇÃO DE EXTRATO -->
+    <!-- MODAL IMPORTAÇÃO DE EXTRATO -->
     <div id="modalImportacao" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-800">Importar Extrato Bancário</h3>
-                <button onclick="fecharModalImportacao()" class="text-gray-400 hover:text-gray-600">✕</button>
+                <h3 class="text-lg font-bold text-slate-800">Importar Extrato Bancário</h3>
+                <button onclick="fecharModalImportacao()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-
-            <p class="text-xs text-gray-500 mb-4">
+            <p class="text-xs text-slate-500 mb-4">
                 Envie o arquivo <strong>.OFX</strong> ou <strong>.CSV</strong> baixado no aplicativo do seu banco.
             </p>
-
             <form id="formImportarExtrato" class="space-y-4">
-                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-teal-600 transition">
+                <div class="border-2 border-dashed border-emerald-100/60 rounded-2xl p-6 text-center hover:border-emerald-600 transition">
                     <input type="file" id="inputArquivoExtrato" accept=".ofx, .csv" required class="hidden" onchange="atualizarNomeArquivo(this)">
                     <label for="inputArquivoExtrato" class="cursor-pointer flex flex-col items-center">
-                        <span class="text-3xl mb-2">📄</span>
-                        <span id="nomeArquivoSelecionado" class="text-sm font-medium text-gray-700">Clique para selecionar o arquivo</span>
-                        <span class="text-xs text-gray-400 mt-1">Suporta .OFX e .CSV</span>
+                        <i data-lucide="file-up" class="w-8 h-8 text-emerald-600 mb-2"></i>
+                        <span id="nomeArquivoSelecionado" class="text-sm font-medium text-slate-700">Clique para selecionar o arquivo</span>
+                        <span class="text-xs text-slate-400 mt-1">Suporta .OFX e .CSV</span>
                     </label>
                 </div>
-
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Banco / Formato</label>
-                    <select id="selectBanco" name="banco" class="w-full border border-gray-300 rounded px-3 py-2 text-sm text-gray-800 bg-white">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Banco / Formato</label>
+                    <select id="selectBanco" name="banco" class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm text-slate-800 bg-white">
                         <option value="generico">Padrão / Outros Bancos</option>
                         <option value="picpay">PicPay</option>
                         <option value="nubank">Nubank</option>
@@ -692,12 +657,13 @@
                         <option value="santander">Santander</option>
                     </select>
                 </div>
-
                 <div class="flex gap-2 pt-2">
-                    <button type="submit" id="btnEnviarImportacao" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                    <button type="submit" id="btnEnviarImportacao"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition">
                         Processar e Salvar
                     </button>
-                    <button type="button" onclick="fecharModalImportacao()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium px-4 py-2.5 rounded-lg text-sm transition">
+                    <button type="button" onclick="fecharModalImportacao()"
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 px-4 rounded-2xl text-sm transition">
                         Cancelar
                     </button>
                 </div>
@@ -705,94 +671,136 @@
         </div>
     </div>
 
-    <!-- MODAL DE CONFIRMAÇÃO DE ARQUIVO JÁ IMPORTADO -->
-    <div id="modalConfirmarImportacao"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full text-center">
-            <span class="text-3xl mb-2 block">⚠️</span>
-            <h3 class="text-lg font-bold text-gray-800 mb-2">Arquivo já importado</h3>
-            <p class="text-sm text-gray-500 mb-6">
-                Você já fez o upload desse arquivo anteriormente. Deseja prosseguir?
-            </p>
+    <!-- MODAL CONFIRMAR IMPORTAÇÃO -->
+    <div id="modalConfirmarImportacao" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full text-center">
+            <i data-lucide="alert-triangle" class="w-8 h-8 text-amber-500 mb-2 block mx-auto"></i>
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Arquivo já importado</h3>
+            <p class="text-sm text-slate-500 mb-6">Você já fez o upload desse arquivo anteriormente. Deseja prosseguir?</p>
             <div class="flex gap-2">
                 <button id="btnConfirmarImportacaoSim"
-                    class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
-                    Sim
-                </button>
+                    class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition">Sim</button>
                 <button id="btnConfirmarImportacaoNao"
-                    class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2.5 rounded-lg text-sm transition">
-                    Não
-                </button>
+                    class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 rounded-2xl text-sm transition">Não</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE CONFIRMAÇÃO GENÉRICO -->
-    <div id="modalConfirmarGenerico"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full text-center">
-            <span class="text-3xl mb-2 block">⚠️</span>
-            <h3 id="tituloConfirmarGenerico" class="text-lg font-bold text-gray-800 mb-2">Tem certeza?</h3>
-            <p id="mensagemConfirmarGenerico" class="text-sm text-gray-500 mb-6"></p>
+    <!-- MODAL CONFIRMAÇÃO GENÉRICO -->
+    <div id="modalConfirmarGenerico" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full text-center">
+            <i data-lucide="alert-triangle" class="w-8 h-8 text-amber-500 mb-2 block mx-auto"></i>
+            <h3 id="tituloConfirmarGenerico" class="text-lg font-bold text-slate-800 mb-2">Tem certeza?</h3>
+            <p id="mensagemConfirmarGenerico" class="text-sm text-slate-500 mb-6"></p>
             <div class="flex gap-2">
                 <button id="btnConfirmarGenericoSim"
-                    class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
-                    Sim
-                </button>
+                    class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition">Sim</button>
                 <button id="btnConfirmarGenericoNao"
-                    class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium py-2.5 rounded-lg text-sm transition">
-                    Não
-                </button>
+                    class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 rounded-2xl text-sm transition">Não</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL NOVA / EDITAR CONTA A PAGAR -->
+    <!-- MODAL CONTA A PAGAR -->
     <div id="modalContaPagar" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-xl shadow-2xl border border-gray-200 p-6 max-w-md w-full">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full">
             <div class="flex justify-between items-center mb-4">
-                <h3 id="tituloModalContaPagar" class="text-lg font-bold text-gray-800">Nova Conta a Pagar</h3>
-                <button onclick="fecharModalContaPagar()" class="text-gray-400 hover:text-gray-600">✕</button>
+                <h3 id="tituloModalContaPagar" class="text-lg font-bold text-slate-800">Nova Conta a Pagar</h3>
+                <button onclick="fecharModalContaPagar()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <form id="formContaPagar" onsubmit="salvarContaPagar(event)" class="space-y-4">
                 <input type="hidden" id="contaPagarId">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Descricao</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Descricao</label>
                     <input type="text" id="contaPagarDescricao" required
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Valor (R$)</label>
                         <input type="number" id="contaPagarValor" step="0.01" min="0.01" required
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                            class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Data de Vencimento</label>
                         <input type="date" id="contaPagarVencimento" required
-                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
+                            class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Categoria</label>
                     <select id="contaPagarCategoria"
-                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-600">
-                        <option value="Alimentacao">Alimentacao</option>
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
+                        <option value="Alimentação">Alimentação</option>
                         <option value="Moradia">Moradia</option>
                         <option value="Transporte">Transporte</option>
                         <option value="Lazer">Lazer</option>
-                        <option value="Saude">Saude</option>
-                        <option value="Educacao">Educacao</option>
+                        <option value="Saúde">Saúde</option>
+                        <option value="Educação">Educação</option>
                         <option value="Compras">Compras</option>
                         <option value="Outros" selected>Outros</option>
                     </select>
                 </div>
                 <div class="flex items-center gap-2">
-                    <input type="checkbox" id="contaPagarRecorrente" class="rounded border-gray-300 text-teal-600 focus:ring-teal-600">
-                    <label for="contaPagarRecorrente" class="text-sm font-medium text-gray-700">Repetir mensalmente</label>
+                    <input type="checkbox" id="contaPagarRecorrente" class="rounded border-emerald-100/60 text-emerald-600 focus:ring-emerald-600">
+                    <label for="contaPagarRecorrente" class="text-sm font-medium text-slate-700">Repetir mensalmente</label>
                 </div>
                 <button type="submit"
-                    class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition">
+                    Salvar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL CONTA A RECEBER -->
+    <div id="modalContaReceber" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="tituloModalContaReceber" class="text-lg font-bold text-slate-800">Nova Conta a Receber</h3>
+                <button onclick="fecharModalContaReceber()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <form id="formContaReceber" onsubmit="salvarContaReceber(event)" class="space-y-4">
+                <input type="hidden" id="contaReceberId">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Descricao</label>
+                    <input type="text" id="contaReceberDescricao" required
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Valor (R$)</label>
+                        <input type="number" id="contaReceberValor" step="0.01" min="0.01" required
+                            class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Data de Recebimento</label>
+                        <input type="date" id="contaReceberRecebimento" required
+                            class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Categoria</label>
+                    <select id="contaReceberCategoria"
+                        class="w-full border border-emerald-100/60 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-emerald-600">
+                        <option value="Alimentação">Alimentação</option>
+                        <option value="Moradia">Moradia</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Saúde">Saúde</option>
+                        <option value="Educação">Educação</option>
+                        <option value="Compras">Compras</option>
+                        <option value="Salário">Salário</option>
+                        <option value="Investimentos">Investimentos</option>
+                        <option value="Outros" selected>Outros</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="contaReceberRecorrente" class="rounded border-emerald-100/60 text-emerald-600 focus:ring-emerald-600">
+                    <label for="contaReceberRecorrente" class="text-sm font-medium text-slate-700">Repetir mensalmente</label>
+                </div>
+                <button type="submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition">
                     Salvar
                 </button>
             </form>
@@ -802,30 +810,28 @@
     <!-- TOAST CONTAINER -->
     <div id="toast-container" class="fixed top-5 right-5 z-[70] flex flex-col gap-3 pointer-events-none"></div>
 
-    <!-- JAVASCRIPT DE INTEGRAÇÃO COM A API E NAVEGAÇÃO -->
+    <!-- ==========================================
+         JAVASCRIPT
+         ========================================== -->
     <script>
         let chartTiposInstance = null;
         let chartCategoriasInstance = null;
 
+        // --- TOAST ---
         function mostrarToast(mensagem, tipo = 'sucesso') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-
             const cores = tipo === 'sucesso'
-                ? 'bg-teal-600 border-teal-700 text-white'
+                ? 'bg-emerald-600 border-emerald-700 text-white'
                 : 'bg-rose-600 border-rose-700 text-white';
-
             const icone = tipo === 'sucesso' ? '&#10003;' : '&#10007;';
-
-            toast.className = `pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-lg shadow-lg border ${cores} toast-enter text-sm font-medium max-w-sm`;
+            toast.className = `pointer-events-auto flex items-center gap-3 px-5 py-3 rounded-2xl shadow-lg border ${cores} toast-enter text-sm font-medium max-w-sm`;
             toast.innerHTML = `
                 <span class="text-base font-bold">${icone}</span>
                 <span class="flex-1">${mensagem}</span>
                 <button onclick="this.parentElement.remove()" class="ml-2 text-white/70 hover:text-white text-lg font-bold leading-none">&times;</button>
             `;
-
             container.appendChild(toast);
-
             setTimeout(() => {
                 toast.classList.remove('toast-enter');
                 toast.classList.add('toast-exit');
@@ -833,28 +839,26 @@
             }, 4000);
         }
 
+        // --- CONFIRMAÇÃO GENÉRICA ---
         function confirmarAcao(mensagem) {
             return new Promise(resolve => {
                 document.getElementById('mensagemConfirmarGenerico').textContent = mensagem;
                 document.getElementById('modalConfirmarGenerico').classList.remove('hidden');
-
                 const btnSim = document.getElementById('btnConfirmarGenericoSim');
                 const btnNao = document.getElementById('btnConfirmarGenericoNao');
-
                 function limpar() {
                     document.getElementById('modalConfirmarGenerico').classList.add('hidden');
                     btnSim.removeEventListener('click', onSim);
                     btnNao.removeEventListener('click', onNao);
                 }
-
                 function onSim() { limpar(); resolve(true); }
                 function onNao() { limpar(); resolve(false); }
-
                 btnSim.addEventListener('click', onSim);
                 btnNao.addEventListener('click', onNao);
             });
         }
 
+        // --- CSRF ---
         function getCsrfToken() {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -874,6 +878,14 @@
             return cookieValue;
         }
 
+        function getCsrfTokenContas() {
+            const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
+            if (cookie) return cookie.split('=')[1];
+            const input = document.querySelector('[name=csrfmiddlewaretoken]');
+            return input ? input.value : '';
+        }
+
+        // --- FILTRO DE DATA ---
         function aplicarFiltroData() {
             const urlParams = new URLSearchParams(window.location.search);
             const aba = urlParams.get('aba');
@@ -890,48 +902,50 @@
             document.getElementById('formFiltroData').submit();
         }
 
+        // --- NAVEGAÇÃO POR ABAS (SIDEBAR) ---
         function alternarAba(nomeAba) {
-            document.querySelectorAll('.aba-conteudo').forEach(el => {
+            document.querySelectorAll('.conteudo-aba').forEach(el => {
                 el.classList.add('hidden');
                 el.classList.remove('aba-animate');
             });
 
-            const botoes = ['dashboard', 'transacoes', 'planejamento', 'contaspagar'];
-            botoes.forEach(aba => {
-                const btn = document.getElementById(`btn-aba-${aba}`);
-                if (btn) {
-                    btn.classList.remove('border-teal-600', 'text-teal-700', 'font-semibold');
-                    btn.classList.add('border-transparent', 'text-gray-500');
-                }
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('bg-white', 'text-[#064e3b]', 'shadow-md', 'font-semibold');
+                btn.classList.add('text-emerald-100', 'hover:bg-emerald-800/50', 'font-medium');
             });
 
-            const abaSelecionada = document.getElementById(`aba-${nomeAba}`);
-            if (abaSelecionada) {
-                abaSelecionada.classList.remove('hidden');
-                abaSelecionada.style.opacity = '0';
-                requestAnimationFrame(() => {
-                    abaSelecionada.classList.add('aba-animate');
-                });
+            const abaAlvo = document.getElementById(`aba-${nomeAba}`);
+            if (abaAlvo) {
+                abaAlvo.classList.remove('hidden');
+                abaAlvo.style.opacity = '0';
+                requestAnimationFrame(() => { abaAlvo.classList.add('aba-animate'); });
             }
 
-            const btnAtivo = document.getElementById(`btn-aba-${nomeAba}`);
+            const btnAtivo = document.getElementById(`nav-${nomeAba}`);
             if (btnAtivo) {
-                btnAtivo.classList.remove('border-transparent', 'text-gray-500');
-                btnAtivo.classList.add('border-teal-600', 'text-teal-700', 'font-semibold');
+                btnAtivo.classList.add('bg-white', 'text-[#064e3b]', 'shadow-md', 'font-semibold');
+                btnAtivo.classList.remove('text-emerald-100', 'hover:bg-emerald-800/50', 'font-medium');
             }
+
+            const titulos = {
+                'dashboard': 'Dashboard & Gráficos',
+                'lancamentos': 'Lançamentos & Histórico',
+                'planejamento': 'Planejamento Financeiro',
+                'contas-pagar': 'Contas a Pagar',
+                'contas-receber': 'Contas a Receber'
+            };
+            document.getElementById('titulo-pagina-ativa').innerText = titulos[nomeAba] || 'Painel';
 
             const url = new URL(window.location);
             url.searchParams.set('aba', nomeAba);
             window.history.replaceState({}, '', url);
 
-            if (nomeAba === 'dashboard') {
-                carregarGraficos();
-            }
-            if (nomeAba === 'contaspagar') {
-                carregarContasPagar();
-            }
+            if (nomeAba === 'dashboard') carregarGraficos();
+            if (nomeAba === 'contas-pagar') carregarContasPagar();
+            if (nomeAba === 'contas-receber') carregarContasReceber();
         }
 
+        // --- GRÁFICOS ---
         async function carregarGraficos() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -949,121 +963,55 @@
 
                 const ctxTipos = document.getElementById('chartTipos').getContext('2d');
                 const coresTipos = data.resumo_tipo.labels.map(label =>
-                    label === 'RECEITA' ? '#0d9488' : '#e11d48'
+                    label === 'RECEITA' ? '#059669' : '#E11D48'
                 );
 
                 if (chartTiposInstance) chartTiposInstance.destroy();
-
                 chartTiposInstance = new Chart(ctxTipos, {
                     type: 'doughnut',
                     data: {
                         labels: data.resumo_tipo.labels,
-                        datasets: [{
-                            data: data.resumo_tipo.valores,
-                            backgroundColor: coresTipos,
-                            borderWidth: 2,
-                            borderColor: '#ffffff'
-                        }]
+                        datasets: [{ data: data.resumo_tipo.valores, backgroundColor: coresTipos, borderWidth: 2, borderColor: '#ffffff' }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        let valor = context.raw || 0;
-                                        return `${context.label}: R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-                                    }
-                                }
-                            }
-                        },
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' }, tooltip: { callbacks: { label: ctx => `${ctx.label}: R$ ${(ctx.raw || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` } } },
                         cutout: '70%'
                     }
                 });
 
                 const ctxCategorias = document.getElementById('chartCategorias').getContext('2d');
-
                 if (chartCategoriasInstance) chartCategoriasInstance.destroy();
-
                 chartCategoriasInstance = new Chart(ctxCategorias, {
                     type: 'bar',
                     data: {
                         labels: data.categorias.labels,
-                        datasets: [{
-                            label: 'Gasto Total (R$)',
-                            data: data.categorias.valores,
-                            backgroundColor: '#e11d48',
-                            borderRadius: 4
-                        }]
+                        datasets: [{ label: 'Gasto Total (R$)', data: data.categorias.valores, backgroundColor: '#E11D48', borderRadius: 4 }]
                     },
                     options: {
-                        indexAxis: 'y',
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function (context) {
-                                        let valor = context.raw || 0;
-                                        return ` Total: R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                grid: { color: '#f3f4f6' },
-                                ticks: { callback: value => 'R$ ' + value }
-                            },
-                            y: { grid: { display: false } }
-                        }
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Total: R$ ${(ctx.raw || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` } } },
+                        scales: { x: { grid: { color: '#f3f4f6' }, ticks: { callback: v => 'R$ ' + v } }, y: { grid: { display: false } } }
                     }
                 });
-
-            } catch (error) {
-                console.error('Erro ao renderizar gráficos:', error);
-            }
+            } catch (error) { console.error('Erro ao renderizar gráficos:', error); }
         }
 
-        // --- CONTROLE DE MODAIS ---
-        function fecharModalSalario() {
-            document.getElementById('modalSalario').classList.add('hidden');
-        }
-
-        function abrirModalSalario() {
-            document.getElementById('modalSalario').classList.remove('hidden');
-        }
-
-        function abrirModalMeta() {
-            document.getElementById('modalMeta').classList.remove('hidden');
-        }
-
-        function fecharModalMeta() {
-            document.getElementById('modalMeta').classList.add('hidden');
-            document.getElementById('formMeta').reset();
-        }
+        // --- MODAIS: ABERTURA / FECHAMENTO ---
+        function fecharModalSalario() { document.getElementById('modalSalario').classList.add('hidden'); }
+        function abrirModalSalario()  { document.getElementById('modalSalario').classList.remove('hidden'); }
+        function abrirModalMeta()     { document.getElementById('modalMeta').classList.remove('hidden'); }
+        function fecharModalMeta()    { document.getElementById('modalMeta').classList.add('hidden'); document.getElementById('formMeta').reset(); }
 
         function abrirModalEdicao(id, descricao, valor, tipo) {
             document.getElementById('editId').value = id;
             document.getElementById('editDescricao').value = descricao;
-            const valorStr = String(valor).replace(',', '.');
-            document.getElementById('editValor').value = parseFloat(valorStr);
-
-            if (tipo === 'RECEITA') {
-                document.getElementById('editTipoReceita').checked = true;
-            } else {
-                document.getElementById('editTipoDespesa').checked = true;
-            }
-
+            document.getElementById('editValor').value = parseFloat(String(valor).replace(',', '.'));
+            if (tipo === 'RECEITA') document.getElementById('editTipoReceita').checked = true;
+            else document.getElementById('editTipoDespesa').checked = true;
             document.getElementById('modalEditar').classList.remove('hidden');
         }
-
-        function fecharModalEdicao() {
-            document.getElementById('modalEditar').classList.add('hidden');
-        }
+        function fecharModalEdicao() { document.getElementById('modalEditar').classList.add('hidden'); }
 
         function abrirModalEditarMeta(id, titulo, valorObjetivo, valorAtual, prazoMeses) {
             document.getElementById('editMetaId').value = id;
@@ -1073,262 +1021,156 @@
             document.getElementById('editMetaPrazoMeses').value = parseInt(prazoMeses);
             document.getElementById('modalEditarMeta').classList.remove('hidden');
         }
+        function fecharModalEditarMeta() { document.getElementById('modalEditarMeta').classList.add('hidden'); }
 
-        function fecharModalEditarMeta() {
-            document.getElementById('modalEditarMeta').classList.add('hidden');
-        }
-
-        // --- SUBMISSÃO DE FORMULÁRIOS (API) ---
-
-        // Salvar Meta
-        document.getElementById('formMeta').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            // 1. Captura os valores dos inputs primeiro
-            const valorObjetivo = parseFloat(document.getElementById('metaValorAlvo').value) || 0;
-            const valorAtual = parseFloat(document.getElementById('metaValorAtual').value) || 0;
-            const prazoMeses = parseInt(document.getElementById('metaPrazoMeses').value) || 1; // Evita divisão por 0
-
-            // 2. Calcula o valor restante e o aporte mensal tratado
-            const valorRestante = valorObjetivo - valorAtual;
-            const aporteCalculado = valorRestante / prazoMeses;
-
-            const payload = {
-                titulo: document.getElementById('metaTitulo').value,
-                valor_objetivo: valorObjetivo,
-                valor_atual: valorAtual,
-                aporte_mensal_desejado: parseFloat(aporteCalculado.toFixed(2)),
-                prazo_meses: prazoMeses
-            };
-
-            try {
-                const response = await fetch('/api/metas/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    const erroData = await response.json();
-                    mostrarToast(`Erro ao cadastrar meta: ${JSON.stringify(erroData)}`, 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao tentar salvar meta.', 'erro');
-            }
-        });
-
-        // Editar Meta (PATCH)
-        document.getElementById('formEditarMeta').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            const id = document.getElementById('editMetaId').value;
-            const titulo = document.getElementById('editMetaTitulo').value;
-            const valorObjetivo = parseFloat(document.getElementById('editMetaValorObjetivo').value);
-            const valorAtual = parseFloat(document.getElementById('editMetaValorAtual').value) || 0;
-            const prazoMeses = parseInt(document.getElementById('editMetaPrazoMeses').value);
-
-            const valorRestante = valorObjetivo - valorAtual;
-            const aporteCalculado = valorRestante / prazoMeses;
-
-            const payload = {
-                titulo: titulo,
-                valor_objetivo: valorObjetivo,
-                valor_atual: valorAtual,
-                aporte_mensal_desejado: parseFloat(aporteCalculado.toFixed(2)),
-                prazo_meses: prazoMeses
-            };
-
-            try {
-                const response = await fetch(`/api/metas/${id}/`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    const erroData = await response.json();
-                    mostrarToast(`Erro ao editar meta: ${JSON.stringify(erroData)}`, 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao tentar editar meta.', 'erro');
-            }
-        });
+        // --- FORMULÁRIOS: SUBMISSÃO API ---
 
         // Salvar Salário
         document.getElementById('formSalario').addEventListener('submit', async function (e) {
             e.preventDefault();
             const salarioVal = parseFloat(document.getElementById('inputSalario').value);
-
-            if (isNaN(salarioVal) || salarioVal <= 0) {
-                mostrarToast('Por favor, insira um valor de salário válido.', 'erro');
-                return;
-            }
-
+            if (isNaN(salarioVal) || salarioVal <= 0) { mostrarToast('Insira um valor válido.', 'erro'); return; }
             try {
                 const response = await fetch('/api/orcamento/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify({ renda_mensal: salarioVal })
                 });
+                if (response.ok) window.location.reload();
+                else { const d = await response.json(); mostrarToast(`Erro: ${JSON.stringify(d)}`, 'erro'); }
+            } catch { mostrarToast('Erro ao conectar com o servidor.', 'erro'); }
+        });
 
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    const erroData = await response.json();
-                    mostrarToast(`Erro ao salvar salário: ${JSON.stringify(erroData)}`, 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro ao conectar com o servidor.', 'erro');
-            }
+        // Salvar Meta
+        document.getElementById('formMeta').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const valorObjetivo = parseFloat(document.getElementById('metaValorAlvo').value) || 0;
+            const valorAtual = parseFloat(document.getElementById('metaValorAtual').value) || 0;
+            const prazoMeses = parseInt(document.getElementById('metaPrazoMeses').value) || 1;
+            const payload = {
+                titulo: document.getElementById('metaTitulo').value,
+                valor_objetivo: valorObjetivo, valor_atual: valorAtual,
+                aporte_mensal_desejado: parseFloat(((valorObjetivo - valorAtual) / prazoMeses).toFixed(2)),
+                prazo_meses: prazoMeses
+            };
+            try {
+                const response = await fetch('/api/metas/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) window.location.reload();
+                else { const d = await response.json(); mostrarToast(`Erro: ${JSON.stringify(d)}`, 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
+        });
+
+        // Editar Meta
+        document.getElementById('formEditarMeta').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const id = document.getElementById('editMetaId').value;
+            const valorObjetivo = parseFloat(document.getElementById('editMetaValorObjetivo').value);
+            const valorAtual = parseFloat(document.getElementById('editMetaValorAtual').value) || 0;
+            const prazoMeses = parseInt(document.getElementById('editMetaPrazoMeses').value);
+            const payload = {
+                titulo: document.getElementById('editMetaTitulo').value,
+                valor_objetivo: valorObjetivo, valor_atual: valorAtual,
+                aporte_mensal_desejado: parseFloat(((valorObjetivo - valorAtual) / prazoMeses).toFixed(2)),
+                prazo_meses: prazoMeses
+            };
+            try {
+                const response = await fetch(`/api/metas/${id}/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) window.location.reload();
+                else { const d = await response.json(); mostrarToast(`Erro: ${JSON.stringify(d)}`, 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         });
 
         // Adicionar Transação
         document.getElementById('formTransacao').addEventListener('submit', async function (e) {
             e.preventDefault();
-
-            const categoriaSelecionada = document.getElementById('categoria').value;
-            const tipoSelecionado = document.querySelector('input[name="tipo_radio"]:checked').value;
-            const dataHoje = new Date().toLocaleDateString('sv-SE');
-            const valorVal = parseFloat(document.getElementById('valor').value);
-
             const payload = {
                 descricao: document.getElementById('descricao').value,
-                valor: valorVal,
-                tipo: tipoSelecionado,
-                data: dataHoje,
-                categoria: categoriaSelecionada,
+                valor: parseFloat(document.getElementById('valor').value),
+                tipo: document.querySelector('input[name="tipo_radio"]:checked').value,
+                data: new Date().toLocaleDateString('sv-SE'),
+                categoria: document.getElementById('categoria').value,
             };
-
             try {
                 const response = await fetch('/api/transacoes/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify(payload)
                 });
-
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    const erroData = await response.json();
-                    mostrarToast(`Erro ao registrar movimentação: ${JSON.stringify(erroData)}`, 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao salvar transação.', 'erro');
-            }
+                if (response.ok) window.location.reload();
+                else { const d = await response.json(); mostrarToast(`Erro: ${JSON.stringify(d)}`, 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         });
 
-        // Submissão da Edição (PATCH)
+        // Editar Transação
         document.getElementById('formEditarTransacao').addEventListener('submit', async function (e) {
             e.preventDefault();
-
             const id = document.getElementById('editId').value;
-            const tipoSelecionado = document.querySelector('input[name="editTipo"]:checked').value;
-            const valorVal = parseFloat(document.getElementById('editValor').value);
-
             const payload = {
                 descricao: document.getElementById('editDescricao').value,
-                valor: valorVal,
-                tipo: tipoSelecionado,
+                valor: parseFloat(document.getElementById('editValor').value),
+                tipo: document.querySelector('input[name="editTipo"]:checked').value,
             };
-
             try {
                 const response = await fetch(`/api/transacoes/${id}/`, {
                     method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify(payload)
                 });
-
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    const erroData = await response.json();
-                    mostrarToast(`Erro ao atualizar transação: ${JSON.stringify(erroData)}`, 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao tentar atualizar transação.', 'erro');
-            }
+                if (response.ok) window.location.reload();
+                else { const d = await response.json(); mostrarToast(`Erro: ${JSON.stringify(d)}`, 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         });
 
         // Deletar Transação
         async function deletarTransacao(id) {
             if (!await confirmarAcao('Tem certeza que deseja excluir esta transação?')) return;
-
             try {
                 const response = await fetch(`/api/transacoes/${id}/`, {
                     method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' }
                 });
-
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    mostrarToast('Erro ao excluir a transação.', 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao tentar excluir.', 'erro');
-            }
+                if (response.ok) window.location.reload();
+                else mostrarToast('Erro ao excluir.', 'erro');
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         }
 
         // Deletar Meta
         async function deletarMeta(id) {
             if (!await confirmarAcao('Tem certeza que deseja excluir esta meta?')) return;
-
             try {
                 const response = await fetch(`/api/metas/${id}/`, {
                     method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' }
                 });
+                if (response.ok) window.location.reload();
+                else mostrarToast('Erro ao excluir.', 'erro');
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
+        }
 
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    mostrarToast('Erro ao excluir a meta.', 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao tentar excluir a meta.', 'erro');
-            }
+        // Deletar Todas Transações
+        async function deletarTodasTransacoes() {
+            if (!await confirmarAcao('Tem certeza que deseja excluir TODAS as suas transações?')) return;
+            try {
+                const response = await fetch('/api/transacoes/limpar_todas/', {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (response.ok) { const d = await response.json(); mostrarToast(d.mensagem, 'sucesso'); window.location.reload(); }
+                else mostrarToast('Erro ao excluir.', 'erro');
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         }
 
         // ==========================================
         // CONTAS A PAGAR
         // ==========================================
-
-        function getCsrfTokenContas() {
-            const cookie = document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='));
-            if (cookie) return cookie.split('=')[1];
-            const input = document.querySelector('[name=csrfmiddlewaretoken]');
-            return input ? input.value : '';
-        }
 
         async function carregarContasPagar() {
             try {
@@ -1338,69 +1180,47 @@
                 const ano = urlParams.get('ano');
                 if (mes) params.set('mes', mes);
                 if (ano) params.set('ano', ano);
-
                 const qs = params.toString();
                 const response = await fetch(`/api/contas-pagar/${qs ? '?' + qs : ''}`);
                 if (!response.ok) return;
 
                 const contas = await response.json();
                 const tabela = document.getElementById('tabelaContasPagar');
-                const hoje = new Date();
-                hoje.setHours(0, 0, 0, 0);
-
-                let totalPendente = 0;
-                let qtdVencidas = 0;
+                const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+                let totalPendente = 0, qtdVencidas = 0;
 
                 if (contas.length === 0) {
-                    tabela.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">Nenhuma conta encontrada.</td></tr>';
+                    tabela.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Nenhuma conta encontrada.</td></tr>';
                 } else {
                     tabela.innerHTML = contas.map(conta => {
-                        const vencimento = new Date(conta.data_vencimento + 'T00:00:00');
+                        const venc = new Date(conta.data_vencimento + 'T00:00:00');
                         let badge = '';
-                        if (conta.paga) {
-                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">Paga</span>';
-                        } else if (vencimento < hoje) {
-                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-rose-100 text-rose-700">Vencida</span>';
-                            totalPendente += parseFloat(conta.valor);
-                            qtdVencidas++;
-                        } else if (vencimento.getTime() === hoje.getTime()) {
-                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-amber-100 text-amber-700">Vence Hoje</span>';
-                            totalPendente += parseFloat(conta.valor);
-                            qtdVencidas++;
-                        } else {
-                            badge = '<span class="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-700">A Vencer</span>';
-                            totalPendente += parseFloat(conta.valor);
-                        }
+                        if (conta.paga) badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">Paga</span>';
+                        else if (venc < hoje) { badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-700">Vencida</span>'; totalPendente += parseFloat(conta.valor); qtdVencidas++; }
+                        else if (venc.getTime() === hoje.getTime()) { badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700">Vence Hoje</span>'; totalPendente += parseFloat(conta.valor); qtdVencidas++; }
+                        else { badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-sky-100 text-sky-700">A Vencer</span>'; totalPendente += parseFloat(conta.valor); }
 
-                        const vencimentoStr = vencimento.toLocaleDateString('pt-BR');
                         const valorStr = parseFloat(conta.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-                        const recorrente = conta.recorrente ? 'Sim' : '—';
-
                         let acoes = '';
-                        if (!conta.paga) {
-                            acoes += `<button onclick="darBaixaConta('${conta.id}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Dar Baixa">✓ Pagar</button> `;
-                        }
-                        acoes += `<button onclick="abrirModalEditarContaPagar('${conta.id}', '${conta.descricao.replace(/'/g, "\\'")}', '${conta.valor}', '${conta.data_vencimento}', '${conta.categoria}', ${conta.recorrente})" class="text-gray-400 hover:text-teal-600 transition text-xs" title="Editar">Editar</button> `;
-                        acoes += `<button onclick="deletarContaPagar('${conta.id}')" class="text-gray-400 hover:text-rose-600 transition text-xs" title="Excluir">Excluir</button>`;
+                        if (!conta.paga) acoes += `<button onclick="darBaixaConta('${conta.id}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Dar Baixa"><i data-lucide="check-circle-2" class="w-3 h-3 inline"></i> Pagar</button> `;
+                        acoes += `<button onclick="abrirModalEditarContaPagar('${conta.id}', '${conta.descricao.replace(/'/g, "\\'")}', '${conta.valor}', '${conta.data_vencimento}', '${conta.categoria}', ${conta.recorrente})" class="text-slate-400 hover:text-emerald-600 transition text-xs" title="Editar"><i data-lucide="pencil" class="w-3 h-3 inline"></i> Editar</button> `;
+                        acoes += `<button onclick="deletarContaPagar('${conta.id}')" class="text-slate-400 hover:text-rose-600 transition text-xs" title="Excluir"><i data-lucide="trash-2" class="w-3 h-3 inline"></i> Excluir</button>`;
 
-                        return `<tr class="hover:bg-gray-50">
+                        return `<tr class="hover:bg-slate-50/50 transition">
                             <td class="px-4 py-3">${badge}</td>
-                            <td class="px-4 py-3 font-medium text-gray-800">${conta.descricao}</td>
-                            <td class="px-4 py-3 text-gray-600">${conta.categoria}</td>
-                            <td class="px-4 py-3 text-gray-600">${vencimentoStr}</td>
-                            <td class="px-4 py-3 text-right font-medium text-gray-800">${valorStr}</td>
-                            <td class="px-4 py-3 text-center text-gray-600">${recorrente}</td>
+                            <td class="px-4 py-3 font-medium text-slate-800">${conta.descricao}</td>
+                            <td class="px-4 py-3 text-slate-600">${conta.categoria}</td>
+                            <td class="px-4 py-3 text-slate-600">${venc.toLocaleDateString('pt-BR')}</td>
+                            <td class="px-4 py-3 text-right font-medium text-slate-800">${valorStr}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">${conta.recorrente ? 'Sim' : '—'}</td>
                             <td class="px-4 py-3 text-center space-x-2">${acoes}</td>
                         </tr>`;
                     }).join('');
                 }
-
                 document.getElementById('totalPendenteContas').textContent = totalPendente.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
                 document.getElementById('qtdVencidasContas').textContent = qtdVencidas;
-
-            } catch (error) {
-                console.error('Erro ao carregar contas a pagar:', error);
-            }
+                lucide.createIcons();
+            } catch (error) { console.error('Erro ao carregar contas a pagar:', error); }
         }
 
         function abrirModalContaPagar() {
@@ -1413,10 +1233,7 @@
             document.getElementById('tituloModalContaPagar').textContent = 'Nova Conta a Pagar';
             document.getElementById('modalContaPagar').classList.remove('hidden');
         }
-
-        function fecharModalContaPagar() {
-            document.getElementById('modalContaPagar').classList.add('hidden');
-        }
+        function fecharModalContaPagar() { document.getElementById('modalContaPagar').classList.add('hidden'); }
 
         function abrirModalEditarContaPagar(id, descricao, valor, vencimento, categoria, recorrente) {
             document.getElementById('contaPagarId').value = id;
@@ -1439,80 +1256,221 @@
                 categoria: document.getElementById('contaPagarCategoria').value,
                 recorrente: document.getElementById('contaPagarRecorrente').checked,
             };
-
             const isEdicao = id !== '';
-            const url = isEdicao ? `/api/contas-pagar/${id}/` : '/api/contas-pagar/';
-            const method = isEdicao ? 'PATCH' : 'POST';
-
             try {
-                const response = await fetch(url, {
-                    method: method,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfTokenContas(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
+                const response = await fetch(isEdicao ? `/api/contas-pagar/${id}/` : '/api/contas-pagar/', {
+                    method: isEdicao ? 'PATCH' : 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfTokenContas(), 'X-Requested-With': 'XMLHttpRequest' },
                     body: JSON.stringify(payload)
                 });
-
-                if (response.ok) {
-                    fecharModalContaPagar();
-                    mostrarToast(isEdicao ? 'Conta atualizada com sucesso!' : 'Conta criada com sucesso!', 'sucesso');
-                    carregarContasPagar();
-                } else {
-                    const erro = await response.json();
-                    mostrarToast('Erro ao salvar conta: ' + JSON.stringify(erro), 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexao ao salvar conta.', 'erro');
-            }
+                if (response.ok) { fecharModalContaPagar(); mostrarToast(isEdicao ? 'Conta atualizada!' : 'Conta criada!', 'sucesso'); carregarContasPagar(); }
+                else { const e = await response.json(); mostrarToast('Erro: ' + JSON.stringify(e), 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         }
 
         async function darBaixaConta(id) {
             try {
                 const response = await fetch(`/api/contas-pagar/${id}/dar_baixa/`, {
                     method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfTokenContas(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    headers: { 'X-CSRFToken': getCsrfTokenContas(), 'X-Requested-With': 'XMLHttpRequest' }
                 });
-
-                if (response.ok) {
-                    mostrarToast('Conta liquidada e lancada no saldo!', 'sucesso');
-                    carregarContasPagar();
-                } else {
-                    const erro = await response.json();
-                    mostrarToast(erro.erro || 'Erro ao dar baixa na conta.', 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexao ao dar baixa.', 'erro');
-            }
+                if (response.ok) { mostrarToast('Conta liquidada!', 'sucesso'); carregarContasPagar(); }
+                else { const e = await response.json(); mostrarToast(e.erro || 'Erro ao dar baixa.', 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         }
 
         async function deletarContaPagar(id) {
-            const confirmado = await confirmarAcao('Tem certeza que deseja excluir esta conta a pagar?');
-            if (!confirmado) return;
-
+            if (!await confirmarAcao('Excluir esta conta a pagar?')) return;
             try {
                 const response = await fetch(`/api/contas-pagar/${id}/`, {
                     method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfTokenContas(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    headers: { 'X-CSRFToken': getCsrfTokenContas(), 'X-Requested-With': 'XMLHttpRequest' }
                 });
-
-                if (response.ok) {
-                    mostrarToast('Conta excluida com sucesso!', 'sucesso');
-                    carregarContasPagar();
-                } else {
-                    mostrarToast('Erro ao excluir a conta.', 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexao ao excluir a conta.', 'erro');
-            }
+                if (response.ok) { mostrarToast('Conta excluída!', 'sucesso'); carregarContasPagar(); }
+                else mostrarToast('Erro ao excluir.', 'erro');
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
         }
+
+        // ==========================================
+        // CONTAS A RECEBER
+        // ==========================================
+
+        async function carregarContasReceber() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const params = new URLSearchParams();
+                const mes = urlParams.get('mes');
+                const ano = urlParams.get('ano');
+                if (mes) params.set('mes', mes);
+                if (ano) params.set('ano', ano);
+                const qs = params.toString();
+                const response = await fetch(`/api/contas-receber/${qs ? '?' + qs : ''}`);
+                if (!response.ok) return;
+
+                const contas = await response.json();
+                const tabela = document.getElementById('tabelaContasReceber');
+                const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+                let totalPendente = 0, qtdAtrasadas = 0;
+
+                if (contas.length === 0) {
+                    tabela.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Nenhuma conta encontrada.</td></tr>';
+                } else {
+                    tabela.innerHTML = contas.map(conta => {
+                        const receb = new Date(conta.data_recebimento + 'T00:00:00');
+                        let badge = '';
+                        if (conta.recebida) badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">Recebida</span>';
+                        else if (receb < hoje) { badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-700">Atrasada</span>'; totalPendente += parseFloat(conta.valor); qtdAtrasadas++; }
+                        else if (receb.getTime() === hoje.getTime()) { badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-700">Vence Hoje</span>'; totalPendente += parseFloat(conta.valor); qtdAtrasadas++; }
+                        else { badge = '<span class="text-xs font-bold px-3 py-1 rounded-full bg-sky-100 text-sky-700">A Receber</span>'; totalPendente += parseFloat(conta.valor); }
+
+                        const valorStr = parseFloat(conta.valor).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                        let acoes = '';
+                        if (!conta.recebida) acoes += `<button onclick="darBaixaReceber('${conta.id}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Receber"><i data-lucide="check-circle-2" class="w-3 h-3 inline"></i> Receber</button> `;
+                        acoes += `<button onclick="abrirModalEditarContaReceber('${conta.id}', '${conta.descricao.replace(/'/g, "\\'")}', '${conta.valor}', '${conta.data_recebimento}', '${conta.categoria}', ${conta.recorrente})" class="text-slate-400 hover:text-emerald-600 transition text-xs" title="Editar"><i data-lucide="pencil" class="w-3 h-3 inline"></i> Editar</button> `;
+                        acoes += `<button onclick="deletarContaReceber('${conta.id}')" class="text-slate-400 hover:text-rose-600 transition text-xs" title="Excluir"><i data-lucide="trash-2" class="w-3 h-3 inline"></i> Excluir</button>`;
+
+                        return `<tr class="hover:bg-slate-50/50 transition">
+                            <td class="px-4 py-3">${badge}</td>
+                            <td class="px-4 py-3 font-medium text-slate-800">${conta.descricao}</td>
+                            <td class="px-4 py-3 text-slate-600">${conta.categoria}</td>
+                            <td class="px-4 py-3 text-slate-600">${receb.toLocaleDateString('pt-BR')}</td>
+                            <td class="px-4 py-3 text-right font-medium text-slate-800">${valorStr}</td>
+                            <td class="px-4 py-3 text-center text-slate-600">${conta.recorrente ? 'Sim' : '—'}</td>
+                            <td class="px-4 py-3 text-center space-x-2">${acoes}</td>
+                        </tr>`;
+                    }).join('');
+                }
+                document.getElementById('totalPendenteReceber').textContent = totalPendente.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
+                document.getElementById('qtdAtrasadasReceber').textContent = qtdAtrasadas;
+                lucide.createIcons();
+            } catch (error) { console.error('Erro ao carregar contas a receber:', error); }
+        }
+
+        function abrirModalContaReceber() {
+            document.getElementById('contaReceberId').value = '';
+            document.getElementById('contaReceberDescricao').value = '';
+            document.getElementById('contaReceberValor').value = '';
+            document.getElementById('contaReceberRecebimento').value = '';
+            document.getElementById('contaReceberCategoria').value = 'Outros';
+            document.getElementById('contaReceberRecorrente').checked = false;
+            document.getElementById('tituloModalContaReceber').textContent = 'Nova Conta a Receber';
+            document.getElementById('modalContaReceber').classList.remove('hidden');
+        }
+        function fecharModalContaReceber() { document.getElementById('modalContaReceber').classList.add('hidden'); }
+
+        function abrirModalEditarContaReceber(id, descricao, valor, recebimento, categoria, recorrente) {
+            document.getElementById('contaReceberId').value = id;
+            document.getElementById('contaReceberDescricao').value = descricao;
+            document.getElementById('contaReceberValor').value = valor;
+            document.getElementById('contaReceberRecebimento').value = recebimento;
+            document.getElementById('contaReceberCategoria').value = categoria;
+            document.getElementById('contaReceberRecorrente').checked = recorrente;
+            document.getElementById('tituloModalContaReceber').textContent = 'Editar Conta a Receber';
+            document.getElementById('modalContaReceber').classList.remove('hidden');
+        }
+
+        async function salvarContaReceber(event) {
+            event.preventDefault();
+            const id = document.getElementById('contaReceberId').value;
+            const payload = {
+                descricao: document.getElementById('contaReceberDescricao').value,
+                valor: parseFloat(document.getElementById('contaReceberValor').value),
+                data_recebimento: document.getElementById('contaReceberRecebimento').value,
+                categoria: document.getElementById('contaReceberCategoria').value,
+                recorrente: document.getElementById('contaReceberRecorrente').checked,
+            };
+            const isEdicao = id !== '';
+            try {
+                const response = await fetch(isEdicao ? `/api/contas-receber/${id}/` : '/api/contas-receber/', {
+                    method: isEdicao ? 'PATCH' : 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfTokenContas(), 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) { fecharModalContaReceber(); mostrarToast(isEdicao ? 'Conta atualizada!' : 'Conta criada!', 'sucesso'); carregarContasReceber(); }
+                else { const e = await response.json(); mostrarToast('Erro: ' + JSON.stringify(e), 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
+        }
+
+        async function darBaixaReceber(id) {
+            try {
+                const response = await fetch(`/api/contas-receber/${id}/dar_baixa/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfTokenContas(), 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (response.ok) { mostrarToast('Conta recebida!', 'sucesso'); carregarContasReceber(); }
+                else { const e = await response.json(); mostrarToast(e.erro || 'Erro ao receber.', 'erro'); }
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
+        }
+
+        async function deletarContaReceber(id) {
+            if (!await confirmarAcao('Excluir esta conta a receber?')) return;
+            try {
+                const response = await fetch(`/api/contas-receber/${id}/`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': getCsrfTokenContas(), 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (response.ok) { mostrarToast('Conta excluída!', 'sucesso'); carregarContasReceber(); }
+                else mostrarToast('Erro ao excluir.', 'erro');
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
+        }
+
+        // ==========================================
+        // IMPORTAÇÃO DE EXTRATO
+        // ==========================================
+
+        function abrirModalImportacao() { document.getElementById('modalImportacao').classList.remove('hidden'); }
+        function fecharModalImportacao() {
+            document.getElementById('modalImportacao').classList.add('hidden');
+            document.getElementById('formImportarExtrato').reset();
+            document.getElementById('nomeArquivoSelecionado').innerText = 'Clique para selecionar o arquivo';
+            arquivoImportacaoSelecionado = null;
+        }
+        function atualizarNomeArquivo(input) {
+            if (input.files && input.files[0]) document.getElementById('nomeArquivoSelecionado').innerText = input.files[0].name;
+        }
+
+        let arquivoImportacaoSelecionado = null;
+
+        async function enviarArquivoExtrato(confirmar) {
+            const btnEnviar = document.getElementById('btnEnviarImportacao');
+            btnEnviar.innerText = 'Processando...'; btnEnviar.disabled = true;
+            const formData = new FormData();
+            formData.append('extrato', arquivoImportacaoSelecionado);
+            formData.append('banco', document.getElementById('selectBanco').value);
+            if (confirmar) formData.append('confirmar', 'true');
+            try {
+                const response = await fetch('/api/importar-extrato/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.status === 409 && data.ja_importado) { document.getElementById('modalConfirmarImportacao').classList.remove('hidden'); return; }
+                if (response.ok) { mostrarToast(data.mensagem, 'sucesso'); window.location.reload(); }
+                else mostrarToast(`Erro: ${data.erro}`, 'erro');
+            } catch { mostrarToast('Erro de conexão.', 'erro'); }
+            finally { btnEnviar.innerText = 'Processar e Salvar'; btnEnviar.disabled = false; }
+        }
+
+        document.getElementById('formImportarExtrato').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const inputArquivo = document.getElementById('inputArquivoExtrato');
+            if (!inputArquivo.files.length) { mostrarToast('Selecione um arquivo.', 'erro'); return; }
+            arquivoImportacaoSelecionado = inputArquivo.files[0];
+            await enviarArquivoExtrato(false);
+        });
+
+        document.getElementById('btnConfirmarImportacaoSim').addEventListener('click', async function () {
+            document.getElementById('modalConfirmarImportacao').classList.add('hidden');
+            await enviarArquivoExtrato(true);
+        });
+        document.getElementById('btnConfirmarImportacaoNao').addEventListener('click', function () {
+            document.getElementById('modalConfirmarImportacao').classList.add('hidden');
+        });
+
+        // ==========================================
+        // INICIALIZAÇÃO
+        // ==========================================
 
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
@@ -1522,118 +1480,10 @@
             } else {
                 carregarGraficos();
             }
-            if (aba === 'contaspagar' || !aba) {
-                carregarContasPagar();
-            }
+            if (aba === 'contas-pagar' || !aba) carregarContasPagar();
+            if (aba === 'contas-receber' || !aba) carregarContasReceber();
         });
-
-        // MODAL DE IMPORTAÇÃO
-        function abrirModalImportacao() {
-            document.getElementById('modalImportacao').classList.remove('hidden');
-        }
-
-        function fecharModalImportacao() {
-            document.getElementById('modalImportacao').classList.add('hidden');
-            document.getElementById('formImportarExtrato').reset();
-            document.getElementById('nomeArquivoSelecionado').innerText = 'Clique para selecionar o arquivo';
-            arquivoImportacaoSelecionado = null;
-        }
-
-        function atualizarNomeArquivo(input) {
-            if (input.files && input.files[0]) {
-                document.getElementById('nomeArquivoSelecionado').innerText = input.files[0].name;
-            }
-        }
-
-        let arquivoImportacaoSelecionado = null;
-
-        async function enviarArquivoExtrato(confirmar) {
-            const btnEnviar = document.getElementById('btnEnviarImportacao');
-            btnEnviar.innerText = 'Processando...';
-            btnEnviar.disabled = true;
-
-            const formData = new FormData();
-            formData.append('extrato', arquivoImportacaoSelecionado);
-            formData.append('banco', document.getElementById('selectBanco').value);
-            if (confirmar) formData.append('confirmar', 'true');
-
-            try {
-                const response = await fetch('/api/importar-extrato/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.status === 409 && data.ja_importado) {
-                    document.getElementById('modalConfirmarImportacao').classList.remove('hidden');
-                    return;
-                }
-
-                if (response.ok) {
-                    mostrarToast(data.mensagem, 'sucesso');
-                    window.location.reload();
-                } else {
-                    mostrarToast(`Erro: ${data.erro}`, 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao enviar o extrato.', 'erro');
-            } finally {
-                btnEnviar.innerText = 'Processar e Salvar';
-                btnEnviar.disabled = false;
-            }
-        }
-
-        document.getElementById('formImportarExtrato').addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            const inputArquivo = document.getElementById('inputArquivoExtrato');
-            if (!inputArquivo.files.length) {
-                mostrarToast('Por favor, selecione um arquivo.', 'erro');
-                return;
-            }
-
-            arquivoImportacaoSelecionado = inputArquivo.files[0];
-            await enviarArquivoExtrato(false);
-        });
-
-        document.getElementById('btnConfirmarImportacaoSim').addEventListener('click', async function () {
-            document.getElementById('modalConfirmarImportacao').classList.add('hidden');
-            await enviarArquivoExtrato(true);
-        });
-
-        document.getElementById('btnConfirmarImportacaoNao').addEventListener('click', function () {
-            document.getElementById('modalConfirmarImportacao').classList.add('hidden');
-        });
-
-        async function deletarTodasTransacoes() {
-            if (!await confirmarAcao('Tem certeza que deseja excluir TODAS as suas transações? Esta ação não pode ser desfeita.')) return;
-
-            try {
-                const response = await fetch('/api/transacoes/limpar_todas/', {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    mostrarToast(data.mensagem, 'sucesso');
-                    window.location.reload();
-                } else {
-                    mostrarToast('Erro ao excluir as transações.', 'erro');
-                }
-            } catch (error) {
-                mostrarToast('Erro de conexão ao tentar excluir.', 'erro');
-            }
-        }
     </script>
+    <script>lucide.createIcons();</script>
 </body>
-
 </html>

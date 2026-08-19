@@ -18,8 +18,8 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Transacao, OrcamentoMensal, ArquivoImportado, MetaFinanceira, ContaPagar
-from .serializers import TransacaoSerializer, OrcamentoSerializer, MetaSerializer, ContaPagarSerializer
+from .models import Transacao, OrcamentoMensal, ArquivoImportado, MetaFinanceira, ContaPagar, ContaReceber
+from .serializers import TransacaoSerializer, OrcamentoSerializer, MetaSerializer, ContaPagarSerializer, ContaReceberSerializer
 from .services.dashboard_service import DashboardService
 from .services.extrato_service import ExtratoService, FormatoNaoSuportadoError
 from .services.planejamento_service import PlanejamentoService
@@ -130,6 +130,51 @@ class ContaPagarViewSet(viewsets.ModelViewSet):
         conta.save()
 
         return Response({'sucesso': True, 'mensagem': 'Conta liquidada e lancada no saldo.'})
+
+
+class ContaReceberViewSet(viewsets.ModelViewSet):
+    serializer_class = ContaReceberSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = ContaReceber.objects.filter(usuario=self.request.user)
+        mes = self.request.query_params.get('mes')
+        ano = self.request.query_params.get('ano')
+        if mes and ano:
+            qs = qs.filter(data_recebimento__month=mes, data_recebimento__year=ano)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        conta = self.get_object()
+        if conta.transacao_gerada:
+            conta.transacao_gerada.delete()
+        return super().destroy(request, *args, **kwargs)
+
+    @action(detail=True, methods=['post'])
+    def dar_baixa(self, request, pk=None):
+        conta = self.get_object()
+        if conta.recebida:
+            return Response({'erro': 'Conta ja foi recebida.'}, status=400)
+
+        transacao = Transacao.objects.create(
+            usuario=request.user,
+            descricao=conta.descricao,
+            valor=conta.valor,
+            tipo='RECEITA',
+            data=conta.data_recebimento,
+            categoria=conta.categoria,
+        )
+
+        conta.recebida = True
+        conta.transacao_gerada = transacao
+        conta.save()
+
+        return Response({'sucesso': True, 'mensagem': 'Conta recebida e lancada no saldo.'})
+
+
 # ==========================================
 # VIEWS WEB (HTML)
 # ==========================================
