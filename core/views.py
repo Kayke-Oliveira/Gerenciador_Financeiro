@@ -1,7 +1,7 @@
-from datetime import datetime
 import hashlib
 
 from django.shortcuts import render, redirect
+from django.utils import timezone
 
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -70,7 +70,7 @@ class GraficosDataAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        hoje = datetime.now()
+        hoje = timezone.localdate()
         mes = int(request.GET.get('mes', hoje.month))
         ano = int(request.GET.get('ano', hoje.year))
 
@@ -188,7 +188,7 @@ def pagina_inicial(request):
     o planejamento matemático e a lista de transações.
     """
     # Para obter mês e ano e transformar em um filtro
-    hoje = datetime.now()
+    hoje = timezone.localdate()
     mes_selecionado = int(request.GET.get('mes', hoje.month))
     ano_selecionado = int(request.GET.get('ano', hoje.year))
 

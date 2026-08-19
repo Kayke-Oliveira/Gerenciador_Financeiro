@@ -1,0 +1,8 @@
+Django==6.0.7
+djangorestframework
+pandas
+ofxparse
+dj-database-url
+whitenoise
+gunicorn
+psycopg2-binary
