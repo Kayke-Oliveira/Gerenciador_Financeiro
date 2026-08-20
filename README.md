@@ -107,8 +107,3 @@ gerenciador_financeiro/
 |-- requirements.txt        # Dependencias versionadas
 |-- render.yaml             # Configuracao de deploy
 ```
-
-## Documentacao
-
-- [DOCUMENTACAO.md](DOCUMENTACAO.md) — Documentacao completa do projeto
-- [MANUAL_ERROS_CORRECOES.md](MANUAL_ERROS_CORRECOES.md) — Historico de bugs e correcoes
