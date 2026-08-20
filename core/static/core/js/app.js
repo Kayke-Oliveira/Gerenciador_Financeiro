@@ -19,7 +19,7 @@
         toast.innerHTML = `
             <span class="text-base font-bold">${icone}</span>
             <span class="flex-1">${escapeHtml(mensagem)}</span>
-            <button onclick="this.parentElement.remove()" class="ml-2 text-white/70 hover:text-white text-lg font-bold leading-none">&times;</button>
+            <button data-action="fechar-toast" class="ml-2 text-white/70 hover:text-white text-lg font-bold leading-none">&times;</button>
         `;
         container.appendChild(toast);
         setTimeout(() => {
@@ -442,9 +442,9 @@
                     const cat = escapeHtml(conta.categoria);
                     const descAttr = conta.descricao.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     let acoes = '';
-                    if (!conta.paga) acoes += `<button onclick="darBaixaConta('${conta.id}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Dar Baixa"><i data-lucide="check-circle-2" class="w-3 h-3 inline"></i> Pagar</button> `;
-                    acoes += `<button onclick="abrirModalEditarContaPagar('${conta.id}', '${descAttr}', '${conta.valor}', '${conta.data_vencimento}', '${escapeHtml(conta.categoria)}', ${conta.recorrente})" class="text-slate-400 hover:text-emerald-600 transition text-xs" title="Editar"><i data-lucide="pencil" class="w-3 h-3 inline"></i> Editar</button> `;
-                    acoes += `<button onclick="deletarContaPagar('${conta.id}')" class="text-slate-400 hover:text-rose-600 transition text-xs" title="Excluir"><i data-lucide="trash-2" class="w-3 h-3 inline"></i> Excluir</button>`;
+                    if (!conta.paga) acoes += `<button data-action="dar-baixa-pagar" data-id="${conta.id}" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Dar Baixa"><i data-lucide="check-circle-2" class="w-3 h-3 inline"></i> Pagar</button> `;
+                    acoes += `<button data-action="editar-conta-pagar" data-id="${conta.id}" data-descricao="${descAttr}" data-valor="${conta.valor}" data-vencimento="${conta.data_vencimento}" data-categoria="${escapeHtml(conta.categoria)}" data-recorrente="${conta.recorrente}" class="text-slate-400 hover:text-emerald-600 transition text-xs" title="Editar"><i data-lucide="pencil" class="w-3 h-3 inline"></i> Editar</button> `;
+                    acoes += `<button data-action="deletar-conta-pagar" data-id="${conta.id}" class="text-slate-400 hover:text-rose-600 transition text-xs" title="Excluir"><i data-lucide="trash-2" class="w-3 h-3 inline"></i> Excluir</button>`;
 
                     return `<tr class="hover:bg-slate-50/50 transition">
                         <td class="px-4 py-3">${badge}</td>
@@ -568,9 +568,9 @@
                     const cat = escapeHtml(conta.categoria);
                     const descAttr = conta.descricao.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                     let acoes = '';
-                    if (!conta.recebida) acoes += `<button onclick="darBaixaReceber('${conta.id}')" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Receber"><i data-lucide="check-circle-2" class="w-3 h-3 inline"></i> Receber</button> `;
-                    acoes += `<button onclick="abrirModalEditarContaReceber('${conta.id}', '${descAttr}', '${conta.valor}', '${conta.data_recebimento}', '${escapeHtml(conta.categoria)}', ${conta.recorrente})" class="text-slate-400 hover:text-emerald-600 transition text-xs" title="Editar"><i data-lucide="pencil" class="w-3 h-3 inline"></i> Editar</button> `;
-                    acoes += `<button onclick="deletarContaReceber('${conta.id}')" class="text-slate-400 hover:text-rose-600 transition text-xs" title="Excluir"><i data-lucide="trash-2" class="w-3 h-3 inline"></i> Excluir</button>`;
+                    if (!conta.recebida) acoes += `<button data-action="dar-baixa-receber" data-id="${conta.id}" class="text-emerald-600 hover:text-emerald-800 text-xs font-medium" title="Receber"><i data-lucide="check-circle-2" class="w-3 h-3 inline"></i> Receber</button> `;
+                    acoes += `<button data-action="editar-conta-receber" data-id="${conta.id}" data-descricao="${descAttr}" data-valor="${conta.valor}" data-recebimento="${conta.data_recebimento}" data-categoria="${escapeHtml(conta.categoria)}" data-recorrente="${conta.recorrente}" class="text-slate-400 hover:text-emerald-600 transition text-xs" title="Editar"><i data-lucide="pencil" class="w-3 h-3 inline"></i> Editar</button> `;
+                    acoes += `<button data-action="deletar-conta-receber" data-id="${conta.id}" class="text-slate-400 hover:text-rose-600 transition text-xs" title="Excluir"><i data-lucide="trash-2" class="w-3 h-3 inline"></i> Excluir</button>`;
 
                     return `<tr class="hover:bg-slate-50/50 transition">
                         <td class="px-4 py-3">${badge}</td>
@@ -726,4 +726,58 @@
         if (aba === 'contas-pagar' || !aba) carregarContasPagar();
         if (aba === 'contas-receber' || !aba) carregarContasReceber();
         lucide.createIcons();
+
+        // --- EVENT DELEGATION (CSP-safe, no inline handlers) ---
+        document.addEventListener('click', function(e) {
+            const el = e.target.closest('[data-action]');
+            if (!el) {
+                if (e.target.closest('[data-aba]')) {
+                    const btn = e.target.closest('[data-aba]');
+                    alternarAba(btn.dataset.aba);
+                    if (btn.dataset.closeMobile) fecharSidebarMobile();
+                }
+                return;
+            }
+            const action = el.dataset.action;
+            switch(action) {
+                case 'abrir-sidebar-mobile': abrirSidebarMobile(); break;
+                case 'fechar-sidebar-mobile': fecharSidebarMobile(); break;
+                case 'abrir-modal-salario': abrirModalSalario(); break;
+                case 'fechar-modal-salario': fecharModalSalario(); break;
+                case 'abrir-modal-meta': abrirModalMeta(); break;
+                case 'fechar-modal-meta': fecharModalMeta(); break;
+                case 'abrir-modal-editar-meta': abrirModalEditarMeta(el.dataset.id, el.dataset.titulo, el.dataset.valorObjetivo, el.dataset.valorAtual, el.dataset.prazoMeses); break;
+                case 'fechar-modal-editar-meta': fecharModalEditarMeta(); break;
+                case 'fechar-modal-edicao': fecharModalEdicao(); break;
+                case 'abrir-modal-importacao': abrirModalImportacao(); break;
+                case 'fechar-modal-importacao': fecharModalImportacao(); break;
+                case 'fechar-modal-deletar-conta': fecharModalDeletarConta(); break;
+                case 'abrir-modal-deletar-conta': abrirModalDeletarConta(); break;
+                case 'abrir-modal-conta-pagar': abrirModalContaPagar(); break;
+                case 'fechar-modal-conta-pagar': fecharModalContaPagar(); break;
+                case 'abrir-modal-conta-receber': abrirModalContaReceber(); break;
+                case 'fechar-modal-conta-receber': fecharModalContaReceber(); break;
+                case 'deletar-transacao': deletarTransacao(el.dataset.id); break;
+                case 'deletar-meta': deletarMeta(el.dataset.id); break;
+                case 'deletar-todas-transacoes': deletarTodasTransacoes(); break;
+                case 'dar-baixa-pagar': darBaixaConta(el.dataset.id); break;
+                case 'deletar-conta-pagar': deletarContaPagar(el.dataset.id); break;
+                case 'dar-baixa-receber': darBaixaReceber(el.dataset.id); break;
+                case 'deletar-conta-receber': deletarContaReceber(el.dataset.id); break;
+                case 'editar-conta-pagar': abrirModalEditarContaPagar(el.dataset.id, el.dataset.descricao, el.dataset.valor, el.dataset.vencimento, el.dataset.categoria, el.dataset.recorrente === 'true'); break;
+                case 'editar-conta-receber': abrirModalEditarContaReceber(el.dataset.id, el.dataset.descricao, el.dataset.valor, el.dataset.recebimento, el.dataset.categoria, el.dataset.recorrente === 'true'); break;
+                case 'editar-transacao': abrirModalEdicao(el.dataset.id, el.dataset.descricao, el.dataset.valor, el.dataset.tipo); break;
+                case 'fechar-toast': el.closest('.pointer-events-auto').remove(); break;
+            }
+        });
+
+        document.addEventListener('change', function(e) {
+            if (e.target.dataset.action === 'aplicar-filtro') aplicarFiltroData();
+            if (e.target.dataset.action === 'atualizar-nome-arquivo') atualizarNomeArquivo(e.target);
+        });
+
+        document.addEventListener('submit', function(e) {
+            if (e.target.dataset.action === 'salvar-conta-pagar') { e.preventDefault(); salvarContaPagar(e); }
+            if (e.target.dataset.action === 'salvar-conta-receber') { e.preventDefault(); salvarContaReceber(e); }
+        });
     });
