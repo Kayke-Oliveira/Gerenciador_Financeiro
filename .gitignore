@@ -35,6 +35,3 @@ staticfiles/
 # Documentacao auxiliar em Markdown (exceto README)
 *.md
 !README.md
-!DOCUMENTACAO.md
-!MANUAL_ERROS_CORRECOES.md
-!Exigencias.md
