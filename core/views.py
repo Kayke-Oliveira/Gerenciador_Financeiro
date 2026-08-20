@@ -1,4 +1,6 @@
 import hashlib
+import os
+import logging
 
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -274,7 +276,9 @@ def login_view(request):
     return render(request, 'core/login.html', {'form': form})
 
 
-# View de Logout
+# View de Logout (requer POST para prevenir CSRF logout)
+@login_required
+@require_POST
 def logout_view(request):
     logout(request)
     return redirect('login')
@@ -289,39 +293,52 @@ def importar_extrato(request):
 
     arquivo = request.FILES['extrato']
 
-    # Calcula o hash do conteúdo para detectar uploads repetidos
+    # Validacao de extensao
+    nome_ext = os.path.splitext(arquivo.name)[1].lower()
+    if nome_ext not in ('.ofx', '.csv'):
+        return JsonResponse({'erro': 'Formato nao suportado. Envie um arquivo .OFX ou .CSV.'}, status=400)
+
+    # Validacao de tamanho (5 MB)
+    if arquivo.size > 5 * 1024 * 1024:
+        return JsonResponse({'erro': 'Arquivo muito grande. Limite: 5 MB.'}, status=400)
+
+    # Sanitiza o nome do arquivo
+    nome_seguro = os.path.basename(arquivo.name)[:255]
+
+    # Calcula o hash do conteudo para detectar uploads repetidos
     hash_arquivo = hashlib.sha256(arquivo.read()).hexdigest()
     arquivo.seek(0)
 
     ja_importado = ArquivoImportado.objects.filter(
         usuario=request.user, hash_arquivo=hash_arquivo).exists()
 
-    # Se o arquivo já foi importado, pede confirmação antes de prosseguir
+    # Se o arquivo ja foi importado, pede confirmacao antes de prosseguir
     if ja_importado and request.POST.get('confirmar') != 'true':
         return JsonResponse({
             'ja_importado': True,
-            'erro': 'Você já fez o upload desse arquivo anteriormente.'
+            'erro': 'Voce ja fez o upload desse arquivo anteriormente.'
         }, status=409)
 
     try:
-        banco_selecionado = request.POST.get('banco', 'picpay')
+        banco_selecionado = request.POST.get('banco', 'generico')
         resultado = ExtratoService.importar(
             arquivo, request.user, banco_selecionado=banco_selecionado)
     except FormatoNaoSuportadoError:
-        return JsonResponse({'erro': 'Formato não suportado. Envie um arquivo .OFX ou .CSV.'}, status=400)
-    except Exception as e:
-        return JsonResponse({'erro': f'Erro ao processar arquivo: {str(e)}'}, status=500)
+        return JsonResponse({'erro': 'Formato nao suportado. Envie um arquivo .OFX ou .CSV.'}, status=400)
+    except Exception:
+        logging.exception('Erro ao processar arquivo de extrato')
+        return JsonResponse({'erro': 'Erro interno ao processar o arquivo. Tente novamente.'}, status=500)
 
-    # Registra o hash do arquivo apenas se a importação teve sucesso
+    # Registra o hash do arquivo apenas se a importacao teve sucesso
     ArquivoImportado.objects.get_or_create(
         usuario=request.user,
         hash_arquivo=hash_arquivo,
-        defaults={'nome_arquivo': arquivo.name},
+        defaults={'nome_arquivo': nome_seguro},
     )
 
     return JsonResponse({
         'sucesso': True,
-        'mensagem': f'{resultado.criadas} transações importadas com sucesso! ({resultado.ignoradas} duplicadas ignoradas)'
+        'mensagem': f'{resultado.criadas} transacoes importadas com sucesso! ({resultado.ignoradas} duplicadas ignoradas)'
     })
 
 @login_required
@@ -340,6 +357,8 @@ def deletar_conta(request):
         return JsonResponse({'erro': 'Senha incorreta.'}, status=400)
 
     username = request.user.username
+    user_id = request.user.id
+    logging.warning('Conta deletada: usuario=%s (id=%s)', username, user_id)
     request.user.delete()
     logout(request)
     return JsonResponse({'sucesso': True, 'mensagem': f'Conta "{username}" excluida com sucesso.'})
