@@ -1,116 +1,114 @@
-# Gerenciador de Financas Pessoais
+# Gerenciador Financeiro
 
-Uma aplicacao web completa para controle financeiro pessoal, desenvolvida com **Django** e **Django REST Framework** no backend, integrada a uma interface minimalista e responsiva estilizada com **Tailwind CSS**.
+Sistema web para gerenciamento de financas pessoais, construido com Django e deployado no Render.com com Supabase PostgreSQL.
 
-O sistema permite que o usuario registre sua renda mensal para obter um planejamento automatico de distribuicao do orcamento (investimentos, reserva de emergencia, contas fixas e lazer), alem de registrar e acompanhar suas entradas e saidas em tempo real.
+**Autor:** Kayke-Oliveira  
+**Producao:** [https://gerenciador-financeiro-13lx.onrender.com](https://gerenciador-financeiro-13lx.onrender.com)  
+**Repositorio:** [https://github.com/Kayke-Oliveira/Gerenciador_Financeiro](https://github.com/Kayke-Oliveira/Gerenciador_Financeiro)
 
 ---
 
 ## Funcionalidades
 
-- **Onboarding:** Modal inicial para definicao do salario mensal.
-- **Planejamento Recomendado:** Calculo automatico de metas baseado no salario:
-  - Meta de Renda Passiva (200x o salario)
-  - Reserva de Emergencia (6x o salario)
-  - Divisao ideal: 10% Investimento, 60% Contas Fixas e 30% Lazer.
-- **Resumo Financeiro em Tempo Real:** Cards com totalizadores de Entradas, Saidas e Saldo Atual.
-- **Graficos Interativos:** Grafico de rosca (entradas vs. saidas) e grafico de barras horizontais (despesas por categoria) via Chart.js.
-- **Lancamento de Movimentacoes:** Cadastro rapido de receitas e despesas com categorias.
-- **Historico de Transacoes:** Listagem de registros com edicao, exclusao e filtro por mes/ano.
-- **Metas Financeiras:** Criacao, edicao e exclusao de metas com acompanhamento de progresso e diagnostico preditivo (badge colorido por status).
-- **Importacao de Extratos:** Suporte a OFX e CSV (PicPay, Nubank, Itau, Bradesco, Santander) com deduplicacao automatica.
-- **Autenticacao:** Sistema completo de cadastro, login e logout com isolamento de dados por perfil.
-- **Toast Notifications:** Notificacoes visuais para feedback do usuario.
-- **Confirmacao Customizada:** Modal de confirmacao para acoes destrutivas.
+- Dashboard com resumo financeiro mensal e graficos interativos (Chart.js)
+- CRUD de transacoes com filtros por mes/ano e categorias
+- Importacao de extratos bancarios (OFX e CSV) com suporte a multiplos bancos
+- Gerenciamento de orcamentos mensais
+- Metas financeiras com diagnostico preditivo (Neutro, Critico, Excelente, Proximo, Longe)
+- Contas a pagar e a receber com baixa manual e criacao automatica de transacoes
+- Exportacao de relatorios em PDF
+- Deletar conta com confirmacao de senha
+- Layout responsivo com sidebar colapsavel em mobile
+- Toast notifications para feedback nao intrusivo
 
----
+## Stack
 
-## Stack Tecnologica
+| Componente | Versao |
+|------------|--------|
+| Python | 3.12+ |
+| Django | 6.0.7 |
+| Django REST Framework | 3.18.0 |
+| pandas | 2.2.3 |
+| ofxparse | 0.2.1 |
+| psycopg2-binary | 2.9.9 |
+| dj-database-url | 3.1.2 |
+| whitenoise | 6.8.2 |
+| gunicorn | 23.0.0 |
+| Tailwind CSS | CDN |
+| Lucide Icons | CDN |
+| Chart.js | CDN |
 
-- **Backend:** Python, Django, Django REST Framework (DRF)
-- **Frontend:** HTML5, JavaScript (Fetch API), Tailwind CSS (CDN)
-- **Graficos:** Chart.js (CDN)
-- **Banco de Dados:** SQLite (Desenvolvimento)
-- **Processamento de Dados:** Pandas (agregacao para graficos)
-- **Leitura de Extratos:** ofxparse (OFX), parsers customizados (CSV)
+## Infraestrutura
 
----
+- **Hospedagem:** Render.com (plano free)
+- **Banco de dados:** Supabase PostgreSQL (pooler IPv4, SSL)
+- **Arquivos estaticos:** Whitenoise (CompressedManifestStaticFilesStorage)
+- **CI/CD:** Deploy automatico via GitHub (push na branch `main`)
 
-## Como Executar o Projeto Localmente
+## Seguranca
 
-### Pre-requisitos
-- Python 3.10+ instalado
-- Git instalado
+- Content Security Policy (CSP) via Django 6.0 built-in middleware
+- HSTS (1 ano), SSL redirect, cookies seguros (Secure + HttpOnly)
+- Headers de seguranca: X-Frame-Options DENY, X-Content-Type-Options nosniff, XSS filter
+- Rate limiting: 30 req/h (anonimo), 200 req/h (autenticado)
+- Logout requer POST (previne CSRF logout via GET)
+- Upload de extratos: validacao de extensao (.ofx/.csv), tamanho maximo (5MB), nome sanitizado
+- Protecao XSS: escape em todo innerHTML dinamico (funcao `escapeHtml()`)
+- JavaScript extraido para arquivo estatico (`core/static/core/js/app.js`), sem inline JS
+- SECRET_KEY via variavel de ambiente (raise ValueError se ausente)
+- Credenciais de deploy nunca commitadas (em `.gitignore`)
 
-### Passo a Passo
+## Como Rodar Localmente
 
-1. **Clone o repositorio:**
-   ```bash
-   git clone https://github.com/SEU-USUARIO/SEU-REPOSITORIO.git
-   cd SEU-REPOSITORIO
-   ```
+```bash
+# 1. Clonar o repositorio
+git clone https://github.com/Kayke-Oliveira/Gerenciador_Financeiro.git
+cd Gerenciador_Financeiro
 
-2. **Crie e ative um ambiente virtual:**
-   ```bash
-   # Linux/macOS
-   python3 -m venv venv
-   source venv/bin/activate
+# 2. Criar e ativar ambiente virtual
+python -m venv venv
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 
-   # Windows
-   python -m venv venv
-   .\venv\Scripts\activate
-   ```
+# 3. Instalar dependencias
+pip install -r requirements.txt
 
-3. **Instale as dependencias:**
-   ```bash
-   pip install django djangorestframework pandas ofxparse
-   ```
+# 4. Configurar variaveis de ambiente (criar arquivo .env)
+# DJANGO_SECRET_KEY=sua_chave_secreta_aqui
+# DATABASE_URL=postgres://...
+# DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+# DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost,http://127.0.0.1
+# DJANGO_DEBUG=True
 
-4. **Execute as migracoes do banco de dados:**
-   ```bash
-   python manage.py migrate
-   ```
+# 5. Rodar migracoes
+python manage.py migrate
 
-5. **Inicie o servidor de desenvolvimento:**
-   ```bash
-   python manage.py runserver
-   ```
+# 6. Criar superusuario
+python manage.py createsuperuser
 
-6. Acesse a aplicacao em `http://127.0.0.1:8000/` no seu navegador.
-
----
+# 7. Iniciar servidor
+python manage.py runserver
+```
 
 ## Estrutura do Projeto
 
 ```
 gerenciador_financeiro/
-├── manage.py
-├── setup/                     # Configuracao do Django
-│   ├── settings.py
-│   ├── urls.py
-│   └── wsgi.py / asgi.py
-│
-└── core/                      # Aplicacao principal
-    ├── models.py              # Modelos (Transacao, OrcamentoMensal, MetaFinanceira, ArquivoImportado)
-    ├── views.py               # Views Web + API Views
-    ├── serializers.py         # Serializadores REST
-    ├── urls.py                # Rotas da aplicacao
-    ├── services/              # Camada de servicos
-    │   ├── dashboard_service.py
-    │   ├── planejamento_service.py
-    │   └── extrato_service.py
-    ├── parsers/               # Parsers de importacao
-    │   ├── csv_parser.py
-    │   ├── ofx_parser.py
-    │   └── categorizador.py
-    └── templates/core/
-        ├── index.html         # Dashboard principal (SPA)
-        ├── login.html
-        └── register.html
+|-- setup/                  # Configuracoes Django (settings, urls, wsgi)
+|-- core/                   # App principal
+|   |-- models.py           # Modelos de dados
+|   |-- views.py            # Views (Web + API REST)
+|   |-- serializers.py      # Serializers DRF
+|   |-- urls.py             # Rotas do app
+|   |-- templates/core/     # Templates HTML
+|   |-- static/core/        # CSS e JavaScript
+|   |-- parsers/            # Parsers de extratos (OFX, CSV)
+|   |-- services/           # Logica de negocios
+|-- requirements.txt        # Dependencias versionadas
+|-- render.yaml             # Configuracao de deploy
 ```
 
----
+## Documentacao
 
-## Licenca
-
-Este projeto esta sob a licenca MIT. Veja o arquivo `LICENSE` para mais detalhes.
+- [DOCUMENTACAO.md](DOCUMENTACAO.md) — Documentacao completa do projeto
+- [MANUAL_ERROS_CORRECOES.md](MANUAL_ERROS_CORRECOES.md) — Historico de bugs e correcoes
