@@ -182,10 +182,10 @@ from django.utils.csp import CSP
 SECURE_CSP = {
     'default-src': [CSP.SELF],
     'script-src': [CSP.SELF, 'cdn.tailwindcss.com', 'cdn.jsdelivr.net', 'unpkg.com'],
-    'style-src': [CSP.SELF, 'cdn.tailwindcss.com', 'cdn.jsdelivr.net', 'unpkg.com', "'unsafe-inline'"],
+    'style-src': [CSP.SELF, 'cdn.tailwindcss.com', 'cdn.jsdelivr.net', 'unpkg.com', 'fonts.googleapis.com', "'unsafe-inline'"],
     'img-src': [CSP.SELF, 'data:'],
     'font-src': [CSP.SELF, 'fonts.gstatic.com', 'cdn.jsdelivr.net'],
-    'connect-src': [CSP.SELF],
+    'connect-src': [CSP.SELF, 'cdn.jsdelivr.net', 'unpkg.com'],
     'frame-src': ['none'],
     'object-src': ['none'],
 }
