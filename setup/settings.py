@@ -74,6 +74,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.csp.ContentSecurityPolicyMiddleware',
 ]
 
 ROOT_URLCONF = 'setup.urls'
@@ -145,6 +146,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'core' / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
@@ -173,6 +175,20 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+
+# Content Security Policy (Django 6.0 built-in)
+from django.utils.csp import CSP
+
+SECURE_CSP = {
+    'default-src': [CSP.SELF],
+    'script-src': [CSP.SELF, 'cdn.tailwindcss.com', 'cdn.jsdelivr.net', 'unpkg.com'],
+    'style-src': [CSP.SELF, 'cdn.tailwindcss.com', 'cdn.jsdelivr.net', 'unpkg.com', "'unsafe-inline'"],
+    'img-src': [CSP.SELF, 'data:'],
+    'font-src': [CSP.SELF, 'fonts.gstatic.com', 'cdn.jsdelivr.net'],
+    'connect-src': [CSP.SELF],
+    'frame-src': ['none'],
+    'object-src': ['none'],
+}
 
 # Upload de arquivos (5 MB)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
