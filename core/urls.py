@@ -12,7 +12,8 @@ from core.views import (
     logout_view,
     GraficosDataAPIView,
     importar_extrato,
-    tela_planejamento
+    tela_planejamento,
+    deletar_conta
 )
 
 # O Router gera as URLs da API RESTful (Apenas para ViewSets)
@@ -34,5 +35,6 @@ urlpatterns = [
     path('api/', include(router.urls)),
     path('api/graficos-dados/', GraficosDataAPIView.as_view(), name='graficos-dados'),
     path('api/importar-extrato/', importar_extrato, name='importar_extrato'),
+    path('api/deletar-conta/', deletar_conta, name='deletar_conta'),
     path('api/tela-planejamento/', tela_planejamento, name='tela_planejamento'),
 ]

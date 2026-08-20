@@ -3,7 +3,7 @@ import hashlib
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -327,3 +327,19 @@ def importar_extrato(request):
 @login_required
 def tela_planejamento(request):
     return redirect('index')
+
+
+@login_required
+@require_POST
+def deletar_conta(request):
+    senha = request.POST.get('senha', '')
+    if not senha:
+        return JsonResponse({'erro': 'Senha obrigatoria.'}, status=400)
+
+    if not request.user.check_password(senha):
+        return JsonResponse({'erro': 'Senha incorreta.'}, status=400)
+
+    username = request.user.username
+    request.user.delete()
+    logout(request)
+    return JsonResponse({'sucesso': True, 'mensagem': f'Conta "{username}" excluida com sucesso.'})

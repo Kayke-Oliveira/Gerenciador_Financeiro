@@ -84,10 +84,14 @@
         <div class="border-t border-emerald-800/60 pt-4 space-y-2">
             <button onclick="abrirModalSalario()"
                 class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-emerald-200 hover:text-white hover:bg-emerald-800/40 rounded-xl transition-all">
-                <i data-lucide="wallet" class="w-4 h-4"></i> Alterar Salário
+                <i data-lucide="wallet" class="w-4 h-4"></i> Alterar Sal&aacute;rio
+            </button>
+            <button onclick="abrirModalDeletarConta()"
+                class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 rounded-xl transition-all">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Deletar Conta
             </button>
             <a href="{% url 'logout' %}"
-                class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 rounded-xl transition-all">
+                class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-emerald-200 hover:text-white hover:bg-emerald-800/40 rounded-xl transition-all">
                 <i data-lucide="log-out" class="w-4 h-4"></i> Sair
             </a>
         </div>
@@ -136,8 +140,12 @@
                 class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-emerald-200 hover:text-white hover:bg-emerald-800/40 rounded-xl transition-all">
                 <i data-lucide="wallet" class="w-4 h-4"></i> Alterar Sal&aacute;rio
             </button>
-            <a href="{% url 'logout' %}"
+            <button onclick="abrirModalDeletarConta(); fecharSidebarMobile()"
                 class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 rounded-xl transition-all">
+                <i data-lucide="trash-2" class="w-4 h-4"></i> Deletar Conta
+            </button>
+            <a href="{% url 'logout' %}"
+                class="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-emerald-200 hover:text-white hover:bg-emerald-800/40 rounded-xl transition-all">
                 <i data-lucide="log-out" class="w-4 h-4"></i> Sair
             </a>
         </div>
@@ -759,6 +767,36 @@
         </div>
     </div>
 
+    <!-- MODAL DELETAR CONTA -->
+    <div id="modalDeletarConta" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
+        <div class="bg-white rounded-3xl shadow-2xl border border-rose-200 p-6 max-w-md w-full">
+            <div class="text-center mb-4">
+                <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="alert-triangle" class="w-6 h-6 text-rose-600"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Deletar sua conta?</h3>
+                <p class="text-sm text-slate-500 mt-1">Essa ação é <strong>irreversível</strong>. Todos os seus dados (transações, metas, contas) serão excluídos permanentemente.</p>
+            </div>
+            <form id="formDeletarConta" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Confirme sua senha</label>
+                    <input type="password" id="senhaDeletarConta" required placeholder="Digite sua senha"
+                        class="w-full border border-rose-200 rounded-2xl px-3 py-2 text-sm text-slate-800 focus:outline-none focus:border-rose-500 transition">
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="submit"
+                        class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-2xl text-sm transition">
+                        Sim, Deletar Minha Conta
+                    </button>
+                    <button type="button" onclick="fecharModalDeletarConta()"
+                        class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium px-4 py-2.5 rounded-2xl text-sm transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL CONTA A PAGAR -->
     <div id="modalContaPagar" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white rounded-3xl shadow-2xl border border-emerald-100/50 p-6 max-w-md w-full">
@@ -1095,6 +1133,38 @@
             document.getElementById('modalEditarMeta').classList.remove('hidden');
         }
         function fecharModalEditarMeta() { document.getElementById('modalEditarMeta').classList.add('hidden'); }
+
+        // --- MODAL DELETAR CONTA ---
+        function abrirModalDeletarConta() {
+            document.getElementById('senhaDeletarConta').value = '';
+            document.getElementById('modalDeletarConta').classList.remove('hidden');
+        }
+        function fecharModalDeletarConta() {
+            document.getElementById('modalDeletarConta').classList.add('hidden');
+            document.getElementById('senhaDeletarConta').value = '';
+        }
+
+        document.getElementById('formDeletarConta').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const senha = document.getElementById('senhaDeletarConta').value;
+            if (!senha) { mostrarToast('Digite sua senha para confirmar.', 'erro'); return; }
+            try {
+                const formData = new FormData();
+                formData.append('senha', senha);
+                const response = await fetch('/api/deletar-conta/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCsrfToken(), 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    mostrarToast(data.mensagem, 'sucesso');
+                    setTimeout(() => { window.location.href = '/login/'; }, 1500);
+                } else {
+                    mostrarToast(data.erro || 'Erro ao deletar conta.', 'erro');
+                }
+            } catch { mostrarToast('Erro de conexao.', 'erro'); }
+        });
 
         // --- FORMULÁRIOS: SUBMISSÃO API ---
 
